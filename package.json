@@ -1,0 +1,21 @@
+{
+  "name": "living-visetos",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "kiosk": "echo 'chrome --kiosk --autoplay-policy=no-user-gesture-required http://localhost:4173 (npm run preview 먼저)'"
+  },
+  "dependencies": {
+    "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.160.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.0"
+  }
+}

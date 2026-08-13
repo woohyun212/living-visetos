@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>리빙 비세토스 — 키오스크 v0.1</title>
+<!--
+  키오스크 진입점. skeleton_v0.html(→ docs/)을 모듈로 이식한 v0.1.
+  버튼 1개 = 모듈 1개 = 계약 핸드오프 1개. 화면의 경계선이 곧 분업 경계선.
+  ⚠️ ADR-003: 아래 MediaPipe CDN <script> 는 오프라인 불가 → tasks-vision + public/models/ 로 교체 예정(A).
+-->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"></script>
+</head>
+<body>
+<h1>리빙 비세토스 <span>키오스크 v0.1</span></h1>
+<p class="sub">버튼 1개 = 모듈 1개 = 계약 핸드오프 1개 — 이 화면의 경계선이 곧 우리 팀의 분업 경계선입니다.</p>
+
+<div class="btns">
+  <button id="btnStart">0. 카메라 시작</button>
+  <button id="btnSeed" disabled>1. 씨앗 추출 <small>(A)</small></button>
+  <button id="btnTile" disabled>2. 패턴 생성 <small>(B)</small></button>
+  <button id="btnOverlay" disabled>3. 실루엣 오버레이 <small>(C)</small></button>
+  <button id="btnBag" disabled>4. 가방에 입히기 <small>(C)</small></button>
+  <button id="btnAll" class="alt" disabled>▶ 전체 실행 (데모 플로우)</button>
+</div>
+<div id="status">Chrome에서 열고 카메라를 허용하세요.</div>
+
+<div class="grid">
+  <div class="panel">
+    <h2><b>모듈 A → C</b> · 카메라 &amp; 실루엣 오버레이 (F-01 / F-03)</h2>
+    <div class="stage">
+      <video id="video" autoplay playsinline muted></video>
+      <canvas id="overlayCanvas"></canvas>
+    </div>
+  </div>
+  <div>
+    <div class="panel">
+      <h2><b>모듈 A</b> · FeatureSeed (F-01)</h2>
+      <div class="inner">
+        <div class="seedColors" id="seedColors"><i></i><i></i><i></i></div>
+        <div class="kv" id="seedInfo">아직 추출 전</div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="panel">
+        <h2><b>모듈 B</b> · PatternTile (F-02·L1)</h2>
+        <div class="inner"><canvas id="tileCanvas" width="512" height="512"></canvas></div>
+      </div>
+      <div class="panel">
+        <h2><b>모듈 C</b> · 3D 프리뷰 (F-04)</h2>
+        <div id="bagWrap"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<pre id="contract">// 계약 뷰어 — 모듈 사이를 실제로 오가는 데이터가 여기 표시됩니다
+FeatureSeed: (대기)
+PatternTile: (대기)</pre>
+
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

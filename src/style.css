@@ -1,0 +1,36 @@
+/* skeleton_v0.html 의 스타일 이식. 키오스크 화면 설계(E)는 별도 과제. */
+:root{--ivory:#F7F3EC;--ink:#1E1B17;--line:#E4DCCE;--red:#B42431;--cognac:#A9652C;--dark:#181512;--gold:#C9A227;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--ivory);color:var(--ink);font-family:"Apple SD Gothic Neo","Malgun Gothic",sans-serif;padding:20px;}
+h1{font-size:20px;letter-spacing:-.01em;}
+h1 span{color:var(--red);font-weight:300;}
+.sub{color:#6b6154;font-size:12.5px;margin:4px 0 16px;}
+.grid{display:grid;grid-template-columns:1.35fr 1fr;gap:14px;max-width:1200px;}
+@media(max-width:900px){.grid{grid-template-columns:1fr;}}
+.panel{background:#fff;border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+.panel h2{font-size:11.5px;letter-spacing:.18em;padding:9px 12px;background:var(--dark);color:#F1EADB;}
+.panel h2 b{color:var(--gold);}
+.stage{position:relative;background:#000;aspect-ratio:4/3;}
+video,#overlayCanvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+video{transform:scaleX(-1);}
+#overlayCanvas{pointer-events:none;}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;}
+.inner{padding:12px;}
+.seedColors{display:flex;gap:6px;margin:8px 0;}
+.seedColors i{width:34px;height:34px;border-radius:4px;border:1px solid var(--line);display:block;}
+.kv{font-size:12.5px;color:#6b6154;}
+#tileCanvas{width:100%;border:1px solid var(--line);border-radius:4px;image-rendering:auto;}
+#bagWrap{aspect-ratio:1/1;background:linear-gradient(180deg,#fff,#efe8da);}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0;}
+button{
+  font-family:inherit;font-size:13.5px;font-weight:700;padding:10px 16px;border-radius:4px;
+  border:1px solid var(--dark);background:var(--dark);color:#fff;cursor:pointer;
+}
+button.alt{background:#fff;color:var(--ink);}
+button:disabled{opacity:.35;cursor:not-allowed;}
+button:hover:not(:disabled){background:var(--red);border-color:var(--red);color:#fff;}
+#contract{
+  background:var(--dark);color:#9fe0a8;font-family:ui-monospace,Menlo,monospace;font-size:11px;
+  padding:12px;border-radius:6px;white-space:pre-wrap;margin-top:14px;max-width:1200px;line-height:1.5;
+}
+#status{font-size:12.5px;color:var(--red);font-weight:700;min-height:18px;margin-top:6px;}

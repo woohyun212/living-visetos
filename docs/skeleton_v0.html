@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>리빙 비세토스 — 걷는 스켈레톤 v0</title>
+<!--
+  ═══════════════════════════════════════════════════════════════
+  리빙 비세토스 · 걷는 스켈레톤 v0 (빽빽한하마)
+  목적: 웹캠 → [A 씨앗] → [B 타일] → [C 오버레이/가방] 전 구간을
+        '못생겨도 관통'시켜 모듈 간 계약을 실물로 검증한다.
+  - 버튼 하나 = 모듈 하나 = 계약 핸드오프 하나. UI가 곧 아키텍처다.
+  - 패턴은 브랜드 문자·로고를 절대 그리지 않는다(가드레일).
+    다이아 격자 리듬 + 제한 팔레트의 '비세토스 문법 오마주'만.
+  - 네트워크: MediaPipe/three.js CDN 필요 (L1 오프라인화는 리포 단계 과제)
+  실행: Chrome에서 파일 열기 → 카메라 허용
+  ═══════════════════════════════════════════════════════════════
+-->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"></script>
+<style>
+  :root{--ivory:#F7F3EC;--ink:#1E1B17;--line:#E4DCCE;--red:#B42431;--cognac:#A9652C;--dark:#181512;--gold:#C9A227;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--ivory);color:var(--ink);font-family:"Apple SD Gothic Neo","Malgun Gothic",sans-serif;padding:20px;}
+  h1{font-size:20px;letter-spacing:-.01em;}
+  h1 span{color:var(--red);font-weight:300;}
+  .sub{color:#6b6154;font-size:12.5px;margin:4px 0 16px;}
+  .grid{display:grid;grid-template-columns:1.35fr 1fr;gap:14px;max-width:1200px;}
+  @media(max-width:900px){.grid{grid-template-columns:1fr;}}
+  .panel{background:#fff;border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+  .panel h2{font-size:11.5px;letter-spacing:.18em;padding:9px 12px;background:var(--dark);color:#F1EADB;}
+  .panel h2 b{color:var(--gold);}
+  .stage{position:relative;background:#000;aspect-ratio:4/3;}
+  video,#overlayCanvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+  video{transform:scaleX(-1);}
+  #overlayCanvas{pointer-events:none;}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;}
+  .inner{padding:12px;}
+  .seedColors{display:flex;gap:6px;margin:8px 0;}
+  .seedColors i{width:34px;height:34px;border-radius:4px;border:1px solid var(--line);display:block;}
+  .kv{font-size:12.5px;color:#6b6154;}
+  #tileCanvas{width:100%;border:1px solid var(--line);border-radius:4px;image-rendering:auto;}
+  #bagWrap{aspect-ratio:1/1;background:linear-gradient(180deg,#fff,#efe8da);}
+  .btns{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0;}
+  button{
+    font-family:inherit;font-size:13.5px;font-weight:700;padding:10px 16px;border-radius:4px;
+    border:1px solid var(--dark);background:var(--dark);color:#fff;cursor:pointer;
+  }
+  button.alt{background:#fff;color:var(--ink);}
+  button:disabled{opacity:.35;cursor:not-allowed;}
+  button:hover:not(:disabled){background:var(--red);border-color:var(--red);color:#fff;}
+  #contract{
+    background:var(--dark);color:#9fe0a8;font-family:ui-monospace,Menlo,monospace;font-size:11px;
+    padding:12px;border-radius:6px;white-space:pre-wrap;margin-top:14px;max-width:1200px;line-height:1.5;
+  }
+  #status{font-size:12.5px;color:var(--red);font-weight:700;min-height:18px;margin-top:6px;}
+</style>
+</head>
+<body>
+<h1>리빙 비세토스 <span>걷는 스켈레톤 v0</span></h1>
+<p class="sub">버튼 1개 = 모듈 1개 = 계약 핸드오프 1개 — 이 화면의 경계선이 곧 우리 팀의 분업 경계선입니다.</p>
+
+<div class="btns">
+  <button id="btnStart">0. 카메라 시작</button>
+  <button id="btnSeed" disabled>1. 씨앗 추출 <small>(A)</small></button>
+  <button id="btnTile" disabled>2. 패턴 생성 <small>(B)</small></button>
+  <button id="btnOverlay" disabled>3. 실루엣 오버레이 <small>(C)</small></button>
+  <button id="btnBag" disabled>4. 가방에 입히기 <small>(C)</small></button>
+  <button id="btnAll" class="alt" disabled>▶ 전체 실행 (데모 플로우)</button>
+</div>
+<div id="status">Chrome에서 열고 카메라를 허용하세요.</div>
+
+<div class="grid">
+  <div class="panel">
+    <h2><b>모듈 A → C</b> · 카메라 &amp; 실루엣 오버레이 (F-01 / F-03)</h2>
+    <div class="stage">
+      <video id="video" autoplay playsinline muted></video>
+      <canvas id="overlayCanvas"></canvas>
+    </div>
+  </div>
+  <div>
+    <div class="panel">
+      <h2><b>모듈 A</b> · FeatureSeed (F-01)</h2>
+      <div class="inner">
+        <div class="seedColors" id="seedColors"><i></i><i></i><i></i></div>
+        <div class="kv" id="seedInfo">아직 추출 전</div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="panel">
+        <h2><b>모듈 B</b> · PatternTile (F-02·L1)</h2>
+        <div class="inner"><canvas id="tileCanvas" width="512" height="512"></canvas></div>
+      </div>
+      <div class="panel">
+        <h2><b>모듈 C</b> · 3D 프리뷰 (F-04)</h2>
+        <div id="bagWrap"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<pre id="contract">// 계약 뷰어 — 모듈 사이를 실제로 오가는 데이터가 여기 표시됩니다
+FeatureSeed: (대기)
+PatternTile: (대기)</pre>
+
+<script type="module">
+import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+
+/* ─────────────────────────────────────────────
+   공유 상태 (리포에서는 모듈 간 이벤트/스토어로 대체)
+───────────────────────────────────────────── */
+const S = { stream:null, seed:null, tile:null, overlayOn:false, mask:null, seg:null, bag:null };
+const $ = id => document.getElementById(id);
+const status = t => $('status').textContent = t;
+const contractView = () => $('contract').textContent =
+  '// 계약 뷰어 — 모듈 사이를 실제로 오가는 데이터가 여기 표시됩니다\n' +
+  'FeatureSeed: ' + (S.seed ? JSON.stringify(S.seed) : '(대기)') + '\n' +
+  'PatternTile: ' + (S.tile ? JSON.stringify(S.tile.meta) : '(대기)');
+
+/* ─────────────────────────────────────────────
+   0. 카메라 (공통 인프라)
+───────────────────────────────────────────── */
+$('btnStart').onclick = async () => {
+  try{
+    S.stream = await navigator.mediaDevices.getUserMedia({ video:{ width:960, height:720 }, audio:false });
+    $('video').srcObject = S.stream;
+    ['btnSeed','btnAll'].forEach(id => $(id).disabled = false);
+    status('카메라 ON — 1번(씨앗 추출)부터 눌러보세요.');
+  }catch(e){ status('카메라 접근 실패: ' + e.message); }
+};
+
+/* ─────────────────────────────────────────────
+   모듈 A · 씨앗 추출 (F-01)
+   담당자는 이 함수(extractSeed)만 고도화하면 된다.
+   출력 계약: FeatureSeed { dominantColors[3], motionEnergy 0~1, rhythm 0~1 }
+───────────────────────────────────────────── */
+async function extractSeed(){
+  const v = $('video');
+  const c = document.createElement('canvas'); c.width = 96; c.height = 72;
+  const x = c.getContext('2d', { willReadFrequently:true });
+
+  x.drawImage(v, 0, 0, c.width, c.height);
+  const f1 = x.getImageData(0,0,c.width,c.height).data;
+  await new Promise(r => setTimeout(r, 350));           // 두 프레임 간격
+  x.drawImage(v, 0, 0, c.width, c.height);
+  const f2 = x.getImageData(0,0,c.width,c.height).data;
+
+  // 모션 에너지: 프레임 차분 평균
+  let diff = 0;
+  for(let i=0;i<f1.length;i+=16) diff += Math.abs(f1[i]-f2[i]);
+  const motionEnergy = Math.min(1, diff/(f1.length/16)/38);
+
+  // 주요 색: 12단계 양자화 후 상위 3개 (극단적 명암은 제외)
+  const bins = {};
+  for(let i=0;i<f2.length;i+=8){
+    const r=f2[i],g=f2[i+1],b=f2[i+2];
+    const lum=(r+g+b)/3; if(lum<28||lum>236) continue;
+    const k=[r,g,b].map(v=>Math.round(v/24)*24).join(',');
+    bins[k]=(bins[k]||0)+1;
+  }
+  const dominantColors = Object.entries(bins).sort((a,b)=>b[1]-a[1]).slice(0,3)
+    .map(([k])=>'#'+k.split(',').map(n=>(+n).toString(16).padStart(2,'0')).join(''));
+  while(dominantColors.length<3) dominantColors.push('#A9652C');
+
+  S.seed = { dominantColors, motionEnergy:+motionEnergy.toFixed(2), rhythm:+(0.3+motionEnergy*0.7).toFixed(2) };
+
+  dominantColors.forEach((col,i)=>$('seedColors').children[i].style.background=col);
+  $('seedInfo').textContent = `motionEnergy ${S.seed.motionEnergy} · rhythm ${S.seed.rhythm}`;
+  $('btnTile').disabled = false; contractView();
+  status('씨앗 추출 완료 → 2번(패턴 생성)');
+}
+$('btnSeed').onclick = extractSeed;
+
+/* ─────────────────────────────────────────────
+   모듈 B · L1 패턴 엔진 (F-02)
+   가드레일: 다이아 격자 리듬 고정, 꼬냑 기반 제한 팔레트(관객 색은
+   포인트로만 혼합), 문자·로고 없음. 담당자는 generateTile만 교체.
+   출력 계약: PatternTile { canvas, meta{palette, spacing, seedRef} }
+───────────────────────────────────────────── */
+function mix(hexA, hexB, t){
+  const A=hexA.match(/\w\w/g).map(h=>parseInt(h,16)), B=hexB.match(/\w\w/g).map(h=>parseInt(h,16));
+  return '#'+A.map((a,i)=>Math.round(a+(B[i]-a)*t).toString(16).padStart(2,'0')).join('');
+}
+function generateTile(seed){
+  const c = $('tileCanvas'), x = c.getContext('2d'), W = c.width;
+  const COGNAC='#A9652C', DARK='#3A2A18', CREAM='#F2E7D2';
+  const accent = mix(COGNAC, seed.dominantColors[0], 0.35);       // 관객 색은 35%만
+  const spacing = Math.round(46 - seed.motionEnergy*18);           // 움직임↑ = 밀도↑
+
+  x.fillStyle = mix(COGNAC, CREAM, 0.12); x.fillRect(0,0,W,W);
+  x.lineWidth = 2.2;
+  for(const dir of [1,-1]){                                        // 다이아 격자
+    x.strokeStyle = mix(DARK, accent, 0.25);
+    for(let i=-W; i<W*2; i+=spacing){
+      x.beginPath(); x.moveTo(i,0); x.lineTo(i+dir*W, W); x.stroke();
+    }
+  }
+  for(let gx=0; gx<W*2; gx+=spacing){                              // 교차점 모티프(추상 로렐 점)
+    for(let gy=0; gy<W*2; gy+=spacing){
+      const px=(gx-gy/2)%W, py=gy%W, big=((gx+gy)/spacing)%3===0;
+      x.fillStyle = big ? accent : mix(CREAM, seed.dominantColors[1], 0.3);
+      x.beginPath(); x.arc(px, py, big?5.5:2.6, 0, Math.PI*2); x.fill();
+    }
+  }
+  return { canvas:c, meta:{ palette:[COGNAC, accent, CREAM], spacing, seedRef:seed.dominantColors[0] } };
+}
+$('btnTile').onclick = () => {
+  if(!S.seed) return;
+  S.tile = generateTile(S.seed);
+  ['btnOverlay','btnBag'].forEach(id=>$(id).disabled=false);
+  contractView(); status('패턴 생성 완료 → 3번(오버레이) 또는 4번(가방)');
+  if(S.bag) S.bag.refreshTexture();
+};
+
+/* ─────────────────────────────────────────────
+   모듈 C-1 · 실루엣 오버레이 (F-03)
+   MediaPipe SelfieSegmentation 마스크 위로 타일을 합성.
+   리포에서는 WebGL 셰이더로 승격 예정 — 여기선 2D 합성으로 관통만.
+───────────────────────────────────────────── */
+function initSeg(){
+  if(S.seg) return;
+  S.seg = new SelfieSegmentation({ locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${f}` });
+  S.seg.setOptions({ modelSelection:1 });
+  S.seg.onResults(res => { S.mask = res.segmentationMask; });
+}
+async function segLoop(){
+  const v = $('video'), oc = $('overlayCanvas'), ox = oc.getContext('2d');
+  oc.width = v.videoWidth || 960; oc.height = v.videoHeight || 720;
+  const pat = document.createElement('canvas'); pat.width = oc.width; pat.height = oc.height;
+  const px = pat.getContext('2d');
+
+  while(S.overlayOn){
+    await S.seg.send({ image:v });
+    ox.clearRect(0,0,oc.width,oc.height);
+    if(S.mask && S.tile){
+      ox.save();
+      ox.translate(oc.width,0); ox.scale(-1,1);                    // 거울 모드 정합
+      ox.drawImage(S.mask, 0, 0, oc.width, oc.height);             // ① 사람 마스크
+      ox.globalCompositeOperation = 'source-in';                   // ② 마스크 안에만
+      const p = px.createPattern(S.tile.canvas, 'repeat');
+      px.clearRect(0,0,pat.width,pat.height);
+      px.save(); px.scale(0.35,0.35); px.fillStyle=p; px.fillRect(0,0,pat.width/0.35,pat.height/0.35); px.restore();
+      ox.drawImage(pat, 0, 0);                                     // ③ 패턴 주입
+      ox.restore();
+      ox.globalCompositeOperation = 'source-over';
+    }
+    await new Promise(r=>requestAnimationFrame(r));
+  }
+  ox.clearRect(0,0,oc.width,oc.height);
+}
+$('btnOverlay').onclick = () => {
+  initSeg();
+  S.overlayOn = !S.overlayOn;
+  $('btnOverlay').textContent = S.overlayOn ? '3. 오버레이 끄기 (C)' : '3. 실루엣 오버레이 (C)';
+  if(S.overlayOn){ status('당신이 방금 태어난 패턴으로 변합니다.'); segLoop(); }
+  else status('오버레이 OFF');
+};
+
+/* ─────────────────────────────────────────────
+   모듈 C-2 · 3D 가방 프리뷰 (F-04)
+   실제 가방 GLTF는 리포 단계에서 교체 — 지금은 프록시 지오메트리로
+   '패턴 → UV 텍스처 스왑' 파이프라인만 증명한다.
+───────────────────────────────────────────── */
+function initBag(){
+  if(S.bag) return;
+  const wrap = $('bagWrap');
+  const scene = new THREE.Scene();
+  const cam = new THREE.PerspectiveCamera(38, 1, 0.1, 50); cam.position.set(0, 0.6, 4.2);
+  const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+  renderer.setSize(wrap.clientWidth, wrap.clientWidth); wrap.appendChild(renderer.domElement);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 1.15));
+  const key = new THREE.DirectionalLight(0xfff2dd, 1.6); key.position.set(2,3,4); scene.add(key);
+
+  const tex = new THREE.CanvasTexture($('tileCanvas'));
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(2,2);
+  const mat = new THREE.MeshStandardMaterial({ map:tex, roughness:0.55, metalness:0.08 });
+  const dark = new THREE.MeshStandardMaterial({ color:0x2a1c10, roughness:0.5 });
+
+  const bag = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.25, 0.62, 4, 4, 2), mat); bag.add(body);
+  const flap = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.5, 0.66), mat); flap.position.set(0, 0.42, 0.01); bag.add(flap);
+  const handle = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.05, 12, 40, Math.PI), dark); handle.position.y = 0.66; bag.add(handle);
+  scene.add(bag);
+
+  S.bag = {
+    refreshTexture(){ tex.needsUpdate = true; },
+    tick(){ bag.rotation.y += 0.012; renderer.render(scene, cam); }
+  };
+  (function loop(){ S.bag.tick(); requestAnimationFrame(loop); })();
+}
+$('btnBag').onclick = () => { initBag(); S.bag.refreshTexture(); status('방금 태어난 나의 빽.'); };
+
+/* ─────────────────────────────────────────────
+   전체 실행 — 데모데이 플로우 프리뷰 (E 상태머신의 원형)
+───────────────────────────────────────────── */
+$('btnAll').onclick = async () => {
+  await extractSeed();
+  $('btnTile').onclick();
+  if(!S.overlayOn) $('btnOverlay').onclick();
+  $('btnBag').onclick();
+  status('전체 플로우 완료 — 이것이 E 모듈 상태머신(ATTRACT→OWN)의 원형입니다.');
+};
+</script>
+</body>
+</html>
