@@ -15,5 +15,6 @@ import tileUrl from '../mocks/tile.png';
 const bitmap = await createImageBitmap(await (await fetch(tileUrl)).blob());
 ```
 
-> `tile.png`는 `seed.json`을 L1 엔진에 넣었을 때 나오는 그림과 같다(spacing 38, 관객 색 35% 혼합).
+> `tile.png`는 `seed.json`을 L1 엔진에 넣었을 때 나오는 그림과 같다(관객 색 35% 혼합).
+> 단 해상도가 절반(512)이라 격자 간격도 절반이다 — 실제 `PatternTile.meta.spacing`은 1024 기준 **77**.
 > 계약이 바뀌면 이 파일들도 같은 PR에서 갱신한다.
