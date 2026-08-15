@@ -47,6 +47,7 @@ const renderContract = () => {
 $<HTMLButtonElement>('btnStart').onclick = async () => {
   try {
     await capture.start();
+    void segmenter.init(); // wasm+모델 프리로드 — 씨앗 추출·오버레이가 기다리지 않게
     ['btnSeed', 'btnAll'].forEach((id) => ($<HTMLButtonElement>(id).disabled = false));
     setStatus('카메라 ON — 1번(씨앗 추출)부터 눌러보세요.');
   } catch (e) {
@@ -57,7 +58,7 @@ $<HTMLButtonElement>('btnStart').onclick = async () => {
 
 /* 1. 모듈 A — FeatureSeed */
 async function runSeed(): Promise<void> {
-  session.seed = await extractSeed(video, { sessionId: session.id });
+  session.seed = await extractSeed(video, { sessionId: session.id, segmenter });
   session.seed.dominantColors.forEach((col, i) => {
     ($('seedColors').children[i] as HTMLElement).style.background = col;
   });
