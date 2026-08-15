@@ -1,5 +1,19 @@
 /* skeleton_v0.html 의 스타일 이식. 키오스크 화면 설계(E)는 별도 과제. */
-:root{--ivory:#F7F3EC;--ink:#1E1B17;--line:#E4DCCE;--red:#B42431;--cognac:#A9652C;--dark:#181512;--gold:#C9A227;}
+
+/* DESIGN.md(리포 루트) 디자인 토큰 — F-01 이 건드리는 요소(FeatureSeed 패널)부터 적용.
+   전체 앱 리스킨은 별도 태스크. */
+@font-face{
+  font-family:"Pretendard Variable";
+  src:url("/assets/fonts/PretendardVariable.woff2") format("woff2-variations");
+  font-weight:45 920;
+  font-style:normal;
+  font-display:swap;
+}
+:root{
+  --ivory:#F7F3EC;--ink:#1E1B17;--line:#E4DCCE;--red:#B42431;--cognac:#A9652C;--dark:#181512;--gold:#C9A227;
+  /* DESIGN.md tokens */
+  --ds-canvas:#ffffff;--ds-ink:#222222;--ds-hairline:#f0f0f0;--ds-muted:#4e4e4e;--ds-radius-sm:6px;
+}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:var(--ivory);color:var(--ink);font-family:"Apple SD Gothic Neo","Malgun Gothic",sans-serif;padding:20px;}
 h1{font-size:20px;letter-spacing:-.01em;}
@@ -34,3 +48,16 @@ button:hover:not(:disabled){background:var(--red);border-color:var(--red);color:
   padding:12px;border-radius:6px;white-space:pre-wrap;margin-top:14px;max-width:1200px;line-height:1.5;
 }
 #status{font-size:12.5px;color:var(--red);font-weight:700;min-height:18px;margin-top:6px;}
+
+/* FeatureSeed 패널 (F-01) — DESIGN.md 토큰 적용 */
+.panel--seed{
+  font-family:"Pretendard Variable","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  background:var(--ds-canvas);border:1px solid var(--ds-hairline);border-radius:var(--ds-radius-sm);
+}
+.panel--seed h2{
+  background:var(--ds-canvas);color:var(--ds-ink);
+  border-bottom:1px solid var(--ds-hairline);letter-spacing:.18em;
+}
+.panel--seed h2 b{color:var(--ds-ink);font-weight:700;}
+.panel--seed .seedColors i{border-radius:var(--ds-radius-sm);border:1px solid var(--ds-hairline);}
+.panel--seed .kv{color:var(--ds-muted);font-size:13px;font-weight:400;}
