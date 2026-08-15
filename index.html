@@ -8,9 +8,9 @@
 <!--
   키오스크 진입점. skeleton_v0.html(→ docs/)을 모듈로 이식한 v0.1.
   버튼 1개 = 모듈 1개 = 계약 핸드오프 1개. 화면의 경계선이 곧 분업 경계선.
-  ⚠️ ADR-003: 아래 MediaPipe CDN <script> 는 오프라인 불가 → tasks-vision + public/models/ 로 교체 예정(A).
+  ADR-003 이행: 세그멘테이션은 @mediapipe/tasks-vision + 로컬 번들(public/wasm, public/models) — CDN 의존 없음.
 -->
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"></script>
+<link rel="preload" href="/assets/fonts/PretendardVariable.woff2" as="font" type="font/woff2" crossorigin>
 </head>
 <body>
 <h1>리빙 비세토스 <span>키오스크 v0.1</span></h1>
@@ -35,7 +35,7 @@
     </div>
   </div>
   <div>
-    <div class="panel">
+    <div class="panel panel--seed">
       <h2><b>모듈 A</b> · FeatureSeed (F-01)</h2>
       <div class="inner">
         <div class="seedColors" id="seedColors"><i></i><i></i><i></i></div>

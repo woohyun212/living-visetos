@@ -26,6 +26,9 @@ dist-ssr
 # OMC 세션 상태 (로컬 전용)
 .omc/
 
+# tasks-vision wasm 런타임 — scripts/sync-mediapipe-wasm.mjs 가 node_modules 에서 복사 (ADR-003)
+public/wasm/
+
 # 결과물 / 임시
 *.webm
 *.mp4
