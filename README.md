@@ -20,8 +20,9 @@ npm run dev          # http://localhost:5173 → 카메라 허용 → 버튼 0�
 데모데이 키오스크 실행: `npm run build && npm run preview` 후
 `chrome --kiosk --autoplay-policy=no-user-gesture-required http://localhost:4173`
 
-> ⚠️ 현재 세그멘테이션 모델은 CDN에서 받는다(ADR-003 미이행) → **첫 실행에 인터넷 필요**.
-> 로컬 모델 번들(`public/models/`)로 교체하는 것이 A 모듈의 W1 과제다.
+> ✅ ADR-003 이행: 세그멘테이션은 `@mediapipe/tasks-vision` + 로컬 번들로 동작한다.
+> wasm 런타임은 `npm install`(postinstall)이 `public/wasm/`으로 복사하고, 모델은
+> `public/models/selfie_segmenter.tflite`(커밋됨) — **첫 실행부터 오프라인 가능**.
 
 ## 문서
 

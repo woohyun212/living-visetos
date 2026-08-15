@@ -4,13 +4,17 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "postinstall": "node scripts/sync-mediapipe-wasm.mjs",
+    "predev": "node scripts/sync-mediapipe-wasm.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/sync-mediapipe-wasm.mjs",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "kiosk": "echo 'chrome --kiosk --autoplay-policy=no-user-gesture-required http://localhost:4173 (npm run preview 먼저)'"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "^1.0.1",
     "three": "^0.160.0"
   },
   "devDependencies": {
