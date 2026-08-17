@@ -9,6 +9,7 @@
     "dev": "vite",
     "prebuild": "node scripts/sync-mediapipe-wasm.mjs",
     "build": "tsc && vite build",
+    "test": "node --experimental-strip-types --test test/pattern.test.ts",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "kiosk": "echo 'chrome --kiosk --autoplay-policy=no-user-gesture-required http://localhost:4173 (npm run preview 먼저)'"
