@@ -6,6 +6,8 @@
  *    승격하는 것이 C 담당의 과제(오버레이·가방·전환을 한 타임라인에 올리기 위함).
  *    승격해도 start/stop/setTile 공개 API는 유지할 것.
  */
+
+import * as THREE from 'three';
 import type { PatternTile } from '../contracts.ts';
 import type { Segmenter } from '../vision/segmenter.ts';
 
@@ -14,6 +16,7 @@ const PATTERN_SCALE = 0.35; // 실루엣 위 타일 반복 크기
 export class OverlayLayer {
   private running = false;
   private tile: PatternTile | null = null;
+  private patternTexture: THREE.Texture | null = null;
 
   constructor(
     private readonly video: HTMLVideoElement,
@@ -22,8 +25,16 @@ export class OverlayLayer {
   ) {}
 
   setTile(tile: PatternTile): void {
-    this.tile = tile;
-  }
+  this.tile = tile;
+
+  const next = new THREE.Texture(tile.bitmap);
+  next.colorSpace = THREE.SRGBColorSpace;
+  next.wrapS = next.wrapT = THREE.RepeatWrapping;
+  next.needsUpdate = true;
+
+  this.patternTexture?.dispose();
+  this.patternTexture = next;
+}
 
   get isRunning(): boolean {
     return this.running;
