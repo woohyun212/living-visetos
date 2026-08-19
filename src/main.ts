@@ -36,8 +36,10 @@ const session = {
 };
 
 const setStatus = (t: string) => ($('status').textContent = t);
-const setDelivery = (info: string, ticket = '대기') => {
+const setDelivery = (info: string, ticket = '대기', label = '전달 정보') => {
   $('deliveryInfo').textContent = info;
+  $('deliveryTicketBox').setAttribute('aria-label', label);
+  $('deliveryTicketLabel').textContent = label;
   $('deliveryTicket').textContent = ticket;
 };
 const canDeliver = () =>
@@ -177,10 +179,10 @@ async function runDeliver(): Promise<void> {
     renderContract();
 
     if (ticket.kind === 'url') {
-      setDelivery('전송 완료 — 결과 페이지가 준비되었습니다.', ticket.url);
+      setDelivery('전송 완료 — 결과 페이지가 준비되었습니다.', ticket.url, '결과 링크');
       setStatus('결과 URL이 생성되었습니다.');
     } else {
-      setDelivery('오프라인 저장 완료 — 아래 세션 코드를 안내하세요.', ticket.code);
+      setDelivery('오프라인 저장 완료 — 아래 오프라인 전달 코드를 안내하세요.', ticket.code, '오프라인 전달 코드');
       setStatus('오프라인 코드가 발급되었습니다. 운영자에게 이 코드를 알려주세요.');
     }
   } catch (e) {
