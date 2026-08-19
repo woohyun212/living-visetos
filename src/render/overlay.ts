@@ -25,7 +25,8 @@ const VERTEX_SHADER = `
 const FRAGMENT_SHADER = `
   uniform sampler2D uMask;
   uniform sampler2D uPattern;
-  uniform float uPatternScale;
+  uniform vec2 uResolution;
+  uniform float uTilePx;
 
   varying vec2 vUv;
 
@@ -36,7 +37,7 @@ const FRAGMENT_SHADER = `
     float maskAlpha = texture2D(uMask, mirrorUv).a;
 
     // 기존 PATTERN_SCALE처럼 패턴을 반복
-    vec2 patternUv = mirrorUv / uPatternScale;
+    vec2 patternUv = (mirrorUv * uResolution) / uTilePx;    
     vec4 patternColor = texture2D(uPattern, patternUv);
 
     // 기존 Canvas의 source-in 역할
@@ -112,7 +113,8 @@ export class OverlayLayer {
       uniforms: {
         uMask: { value: this.maskTexture },
         uPattern: { value: null },
-        uPatternScale: { value: PATTERN_SCALE },
+        uResolution: { value: new THREE.Vector2(1, 1) },
+        uTilePx: { value: 1024 * PATTERN_SCALE },
       },
       vertexShader: VERTEX_SHADER,
       fragmentShader: FRAGMENT_SHADER,
@@ -159,6 +161,7 @@ export class OverlayLayer {
   const height = this.video.videoHeight || 720;
 
   this.renderer.setSize(width, height, false);
+  this.material.uniforms['uResolution']!.value.set(width, height);
 
   while (this.running) {
     await this.segmenter.send(this.video);
