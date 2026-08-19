@@ -17,14 +17,27 @@
 <p class="sub">버튼 1개 = 모듈 1개 = 계약 핸드오프 1개 — 이 화면의 경계선이 곧 우리 팀의 분업 경계선입니다.</p>
 
 <div class="btns">
-  <button id="btnStart">0. 카메라 시작</button>
-  <button id="btnSeed" disabled>1. 씨앗 추출 <small>(A)</small></button>
-  <button id="btnTile" disabled>2. 패턴 생성 <small>(B)</small></button>
-  <button id="btnOverlay" disabled>3. 실루엣 오버레이 <small>(C)</small></button>
-  <button id="btnBag" disabled>4. 가방에 입히기 <small>(C)</small></button>
-  <button id="btnAll" class="alt" disabled>▶ 전체 실행 (데모 플로우)</button>
+  <button id="btnStart" type="button">0. 카메라 시작</button>
+  <button id="btnSeed" type="button" disabled>1. 씨앗 추출 <small>(A)</small></button>
+  <button id="btnTile" type="button" disabled>2. 패턴 생성 <small>(B)</small></button>
+  <button id="btnOverlay" type="button" disabled>3. 실루엣 오버레이 <small>(C)</small></button>
+  <button id="btnBag" type="button" disabled>4. 가방에 입히기 <small>(C)</small></button>
+  <button id="btnDeliver" type="button" disabled>5. 결과 녹화/전송 <small>(D·F-05)</small></button>
+  <button id="btnAll" type="button" class="alt" disabled>▶ 전체 실행 (데모 플로우)</button>
+  <a class="operatorLink" href="/admin.html" aria-label="운영 대시보드로 이동">운영 대시보드</a>
 </div>
 <div id="status">Chrome에서 열고 카메라를 허용하세요.</div>
+<div class="deliveryPanel" aria-live="polite">
+  <div class="deliveryCopy">
+    <b>D · F-05</b>
+    <span id="deliveryInfo">패턴과 오버레이 준비 후 결과를 녹화할 수 있습니다.</span>
+    <span class="deliveryInstruction">녹화가 끝나면 결과 링크 또는 오프라인 전달 코드가 오른쪽에 크게 표시됩니다.</span>
+  </div>
+  <div id="deliveryTicketBox" class="deliveryTicketBox" aria-label="결과 링크 또는 오프라인 전달 코드">
+    <span id="deliveryTicketLabel" class="deliveryTicketLabel">전달 정보</span>
+    <code id="deliveryTicket">대기</code>
+  </div>
+</div>
 
 <div class="grid">
   <div class="panel">

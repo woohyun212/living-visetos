@@ -12,16 +12,32 @@
 :root{
   --ivory:#F7F3EC;--ink:#1E1B17;--line:#E4DCCE;--red:#B42431;--cognac:#A9652C;--dark:#181512;--gold:#C9A227;
   /* DESIGN.md tokens */
-  --ds-canvas:#ffffff;--ds-ink:#222222;--ds-hairline:#f0f0f0;--ds-muted:#4e4e4e;--ds-radius-sm:6px;
+  --ds-canvas:#ffffff;--ds-ink:#222222;--ds-surface:#f5f5f5;--ds-pill:#f4f4f4;--ds-hairline:#f0f0f0;--ds-muted:#4e4e4e;--ds-radius-none:0px;--ds-radius-sm:6px;--ds-radius-pill:30px;--ds-border-hairline:1px;--ds-border-active:2px;--ds-space-xs:4px;--ds-space-sm:6px;--ds-space-md:8px;--ds-space-lg:12px;--ds-space-xl:24px;--ds-measure-page:1200px;--ds-measure-control:30px;--ds-font-utility:13px;--ds-font-body:16px;--ds-font-search:24px;--ds-font-ticket:clamp(var(--ds-font-search),4vw,40px);--ds-weight-regular:400;--ds-weight-bold:700;--ds-line-tight:1.21;--ds-shadow-none:none;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:var(--ivory);color:var(--ink);font-family:"Apple SD Gothic Neo","Malgun Gothic",sans-serif;padding:20px;}
 h1{font-size:20px;letter-spacing:-.01em;}
 h1 span{color:var(--red);font-weight:300;}
 .sub{color:#6b6154;font-size:12.5px;margin:4px 0 16px;}
-.grid{display:grid;grid-template-columns:1.35fr 1fr;gap:14px;max-width:1200px;}
+.grid{display:grid;grid-template-columns:1.35fr 1fr;gap:14px;max-width:var(--ds-measure-page);}
 @media(max-width:900px){.grid{grid-template-columns:1fr;}}
 .panel{background:#fff;border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+.deliveryPanel{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,auto);align-items:stretch;gap:var(--ds-space-lg);max-width:var(--ds-measure-page);margin:var(--ds-space-md) 0 14px;
+  padding:var(--ds-space-lg);background:var(--ds-canvas);border:var(--ds-border-active) solid var(--ds-ink);border-radius:var(--ds-radius-sm);
+  color:var(--ds-ink);font-family:"Pretendard Variable","Apple SD Gothic Neo","Malgun Gothic",sans-serif;box-shadow:var(--ds-shadow-none);
+}
+.deliveryCopy{display:grid;align-content:center;gap:var(--ds-space-xs);min-width:0;}
+.deliveryPanel b{color:var(--ds-muted);font-size:var(--ds-font-utility);font-weight:var(--ds-weight-regular);letter-spacing:.08em;text-transform:uppercase;}
+#deliveryInfo{color:var(--ds-ink);font-size:var(--ds-font-body);font-weight:var(--ds-weight-bold);line-height:1.5;}
+.deliveryInstruction{color:var(--ds-muted);font-size:var(--ds-font-utility);font-weight:var(--ds-weight-regular);line-height:1.5;}
+.deliveryTicketBox{display:grid;align-content:center;gap:var(--ds-space-sm);min-width:0;padding:0 var(--ds-space-xl);border-left:var(--ds-border-active) solid var(--ds-ink);background:var(--ds-surface);}
+.deliveryTicketLabel{color:var(--ds-muted);font-size:var(--ds-font-utility);font-weight:var(--ds-weight-regular);letter-spacing:.08em;text-transform:uppercase;}
+.deliveryPanel code{
+  display:block;max-width:100%;padding:0;border-radius:var(--ds-radius-none);background:transparent;color:var(--ds-ink);
+  font-family:ui-monospace,Menlo,monospace;font-size:var(--ds-font-ticket);font-weight:var(--ds-weight-bold);letter-spacing:.04em;line-height:var(--ds-line-tight);overflow-wrap:anywhere;
+}
+@media(max-width:900px){.deliveryPanel{grid-template-columns:1fr;}.deliveryTicketBox{border-left:0;border-top:var(--ds-border-active) solid var(--ds-ink);padding:var(--ds-space-lg) 0 0;}}
 .panel h2{font-size:11.5px;letter-spacing:.18em;padding:9px 12px;background:var(--dark);color:#F1EADB;}
 .panel h2 b{color:var(--gold);}
 .stage{position:relative;background:#000;aspect-ratio:4/3;}
@@ -43,6 +59,12 @@ button{
 button.alt{background:#fff;color:var(--ink);}
 button:disabled{opacity:.35;cursor:not-allowed;}
 button:hover:not(:disabled){background:var(--red);border-color:var(--red);color:#fff;}
+.operatorLink{
+  display:inline-flex;align-items:center;justify-content:center;min-height:var(--ds-measure-control);
+  margin-left:auto;padding:0 var(--ds-space-md);border:1px solid var(--ds-hairline);border-radius:var(--ds-radius-pill);
+  background:var(--ds-pill);color:var(--ds-muted);font-size:var(--ds-font-utility);font-weight:400;text-decoration:none;
+}
+.operatorLink:focus-visible{outline:2px solid var(--ds-ink);outline-offset:2px;}
 #contract{
   background:var(--dark);color:#9fe0a8;font-family:ui-monospace,Menlo,monospace;font-size:11px;
   padding:12px;border-radius:6px;white-space:pre-wrap;margin-top:14px;max-width:1200px;line-height:1.5;

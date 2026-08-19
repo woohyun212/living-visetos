@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>리빙 비세토스 - 결과</title>
+<link rel="icon" href="data:,">
+<link rel="preload" href="/assets/fonts/PretendardVariable.woff2" as="font" type="font/woff2" crossorigin>
+</head>
+<body>
+<main class="resultShell" aria-labelledby="resultTitle">
+  <header class="resultHero">
+    <div>
+      <p class="eyebrow">D · F-06</p>
+      <h1 id="resultTitle">나의 비세토스 결과</h1>
+      <p class="heroCopy">키오스크에서 업로드된 패턴 결과를 확인하고, 데모 전용 목업 주문을 남길 수 있습니다.</p>
+    </div>
+    <a class="pillLink" href="/">키오스크</a>
+  </header>
+
+  <section class="statusBand" id="statusBand" aria-live="polite">결과 코드를 확인하는 중입니다.</section>
+
+  <div class="resultGrid">
+    <section class="resultPanel" aria-labelledby="detailTitle">
+      <div class="panelHeader">
+        <div>
+          <p class="eyebrow">Uploaded result</p>
+          <h2 id="detailTitle">결과 상세</h2>
+        </div>
+      </div>
+      <div class="detailContent" id="detailContent">
+        <p class="emptyState">결과를 불러오는 중입니다.</p>
+      </div>
+    </section>
+
+    <section class="orderPanel" aria-labelledby="orderTitle">
+      <div class="panelHeader">
+        <div>
+          <p class="eyebrow">Mock order only</p>
+          <h2 id="orderTitle">데모 주문</h2>
+        </div>
+      </div>
+      <form class="orderForm" id="orderForm" novalidate>
+        <p class="mockNotice">결제, 제작, 배송, 재고 차감이 없는 F-06 데모 기록입니다.</p>
+        <label>
+          <span>이름 또는 닉네임</span>
+          <input id="visitorName" name="visitorName" type="text" maxlength="40" autocomplete="name" required>
+        </label>
+        <label>
+          <span>연락처</span>
+          <input id="contact" name="contact" type="text" maxlength="80" autocomplete="email" placeholder="email@example.com 또는 010-0000-0000" required>
+        </label>
+        <label>
+          <span>상품 옵션</span>
+          <select id="productOption" name="productOption" required>
+            <option value="classic-tote">Classic tote mock</option>
+            <option value="mini-tote">Mini tote mock</option>
+            <option value="flat-pouch">Flat pouch mock</option>
+          </select>
+        </label>
+        <label class="consentRow">
+          <input id="consent" name="consent" type="checkbox" required>
+          <span>목업 주문 기록 저장에 동의합니다. 실제 결제나 배송 요청이 아님을 확인했습니다.</span>
+        </label>
+        <button class="submitButton" id="submitButton" type="submit">목업 주문 남기기</button>
+        <p class="formStatus" id="formStatus" aria-live="polite"></p>
+      </form>
+    </section>
+  </div>
+</main>
+<script type="module" src="/src/result/main.ts"></script>
+</body>
+</html>

@@ -8,19 +8,16 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
 
-    /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
 
-    /* Linting */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    /* erasableSyntaxOnly 는 끔 — 생성자 파라미터 프로퍼티를 쓴다 (Vite/esbuild 지원) */
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src", "api", "vite.config.ts"]
 }
