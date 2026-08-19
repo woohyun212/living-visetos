@@ -345,7 +345,24 @@ async function signStorageObject(path: string): Promise<string | null> {
     throw new HttpError('Storage signed URL response did not include a URL.', 502);
   }
 
-  return new URL(signedUrl, url).toString();
+  return storageSignedUrl(signedUrl, url);
+}
+
+function storageSignedUrl(signedUrl: string, supabaseUrl: string): string {
+  if (/^https?:\/\//i.test(signedUrl)) {
+    return signedUrl;
+  }
+
+  const path = signedUrl.startsWith('/') ? signedUrl : `/${signedUrl}`;
+  if (path.startsWith('/storage/v1/')) {
+    return new URL(path, supabaseUrl).toString();
+  }
+
+  if (path.startsWith('/object/')) {
+    return new URL(`/storage/v1${path}`, supabaseUrl).toString();
+  }
+
+  return new URL(path, supabaseUrl).toString();
 }
 
 function requireText(form: FormData, name: string): string {
