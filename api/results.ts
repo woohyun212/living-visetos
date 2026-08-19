@@ -367,7 +367,8 @@ function requireFile(
     throw new Error(`Missing file field: ${name}.`);
   }
 
-  if (!allowedMimeTypes.has(value.type)) {
+  const mimeType = normalizedMimeType(value.type);
+  if (!allowedMimeTypes.has(mimeType)) {
     throw new Error(`Unsupported file type for ${name}.`);
   }
 
@@ -541,11 +542,16 @@ function parsePositiveInteger(value: string | undefined, fallback: number): numb
 }
 
 function extensionFor(file: File, fallback: string): string {
-  if (file.type.includes('mp4')) return 'mp4';
-  if (file.type.includes('png')) return 'png';
-  if (file.type.includes('jpeg')) return 'jpg';
-  if (file.type.includes('webm')) return 'webm';
+  const mimeType = normalizedMimeType(file.type);
+  if (mimeType === 'video/mp4') return 'mp4';
+  if (mimeType === 'image/png') return 'png';
+  if (mimeType === 'image/jpeg') return 'jpg';
+  if (mimeType === 'video/webm') return 'webm';
   return fallback;
+}
+
+function normalizedMimeType(value: string): string {
+  return value.split(';', 1)[0]?.trim().toLowerCase() ?? '';
 }
 
 function encodeURIComponentPath(path: string): string {
