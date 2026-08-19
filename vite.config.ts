@@ -35,10 +35,8 @@ function installLocalResultMiddlewares(server: LocalMiddlewareServer): void {
       await sendWebResponse(response, await api.default.fetch(
         toWebRequest(request as unknown as LocalApiRequest, '/api/results'),
       ));
-    } catch {
-      response.statusCode = 500;
-      response.setHeader('content-type', 'application/json');
-      response.end(JSON.stringify({ error: 'Local results API failed.' }));
+    } catch (error) {
+      sendLocalApiFailure(response, 'Local results API failed.', error);
     }
   });
 
@@ -48,10 +46,8 @@ function installLocalResultMiddlewares(server: LocalMiddlewareServer): void {
       await sendWebResponse(response, await api.default.fetch(
         toWebRequest(request as unknown as LocalApiRequest, '/api/orders'),
       ));
-    } catch {
-      response.statusCode = 500;
-      response.setHeader('content-type', 'application/json');
-      response.end(JSON.stringify({ error: 'Local orders API failed.' }));
+    } catch (error) {
+      sendLocalApiFailure(response, 'Local orders API failed.', error);
     }
   });
 
@@ -112,4 +108,15 @@ async function sendWebResponse(
     response.setHeader(key, value);
   });
   response.end(await webResponse.text());
+}
+
+function sendLocalApiFailure(
+  response: LocalApiResponse,
+  fallback: string,
+  error: unknown,
+): void {
+  const detail = error instanceof Error ? error.message : fallback;
+  response.statusCode = 500;
+  response.setHeader('content-type', 'application/json');
+  response.end(JSON.stringify({ error: fallback, detail }));
 }
