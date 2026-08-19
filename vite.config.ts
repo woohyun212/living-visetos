@@ -8,6 +8,7 @@ export default defineConfig({
       input: {
         kiosk: 'index.html',
         admin: 'admin.html',
+        result: 'result.html',
       },
     },
   },
@@ -20,19 +21,38 @@ function localResultsApiPlugin() {
       server.middlewares.use('/api/results', async (request, response) => {
         try {
           const api = await import('./api/results.ts');
-          const webResponse = await api.default.fetch(
-            toWebRequest(request as unknown as LocalApiRequest),
-          );
-          response.statusCode = webResponse.status;
-          webResponse.headers.forEach((value, key) => {
-            response.setHeader(key, value);
-          });
-          response.end(await webResponse.text());
+          await sendWebResponse(response, await api.default.fetch(
+            toWebRequest(request as unknown as LocalApiRequest, '/api/results'),
+          ));
         } catch {
           response.statusCode = 500;
           response.setHeader('content-type', 'application/json');
           response.end(JSON.stringify({ error: 'Local results API failed.' }));
         }
+      });
+
+      server.middlewares.use('/api/orders', async (request, response) => {
+        try {
+          const api = await import('./api/orders.ts');
+          await sendWebResponse(response, await api.default.fetch(
+            toWebRequest(request as unknown as LocalApiRequest, '/api/orders'),
+          ));
+        } catch {
+          response.statusCode = 500;
+          response.setHeader('content-type', 'application/json');
+          response.end(JSON.stringify({ error: 'Local orders API failed.' }));
+        }
+      });
+
+      server.middlewares.use('/results', async (request, _response, next) => {
+        const localRequest = request as unknown as { url?: string };
+        if (localRequest.url === '/' || localRequest.url?.startsWith('/?')) {
+          next();
+          return;
+        }
+
+        localRequest.url = '/result.html';
+        next();
       });
     },
   };
@@ -45,7 +65,13 @@ type LocalApiRequest = {
   readable: boolean;
 };
 
-function toWebRequest(request: LocalApiRequest): Request {
+type LocalApiResponse = {
+  statusCode: number;
+  setHeader(key: string, value: string): void;
+  end(body: string): void;
+};
+
+function toWebRequest(request: LocalApiRequest, fallbackPath: string): Request {
   const headers = new Headers();
   for (const [key, value] of Object.entries(request.headers)) {
     if (Array.isArray(value)) {
@@ -56,7 +82,7 @@ function toWebRequest(request: LocalApiRequest): Request {
   }
 
   const method = request.method ?? 'GET';
-  const url = new URL(request.url ?? '/api/results', 'http://localhost').toString();
+  const url = new URL(request.url ?? fallbackPath, 'http://localhost').toString();
   if (method === 'GET' || method === 'HEAD') {
     return new Request(url, { headers, method });
   }
@@ -67,4 +93,15 @@ function toWebRequest(request: LocalApiRequest): Request {
     headers,
     method,
   } as RequestInit & { duplex: 'half' });
+}
+
+async function sendWebResponse(
+  response: LocalApiResponse,
+  webResponse: Response,
+): Promise<void> {
+  response.statusCode = webResponse.status;
+  webResponse.headers.forEach((value, key) => {
+    response.setHeader(key, value);
+  });
+  response.end(await webResponse.text());
 }
