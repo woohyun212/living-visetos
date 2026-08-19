@@ -30,6 +30,20 @@ type ResultDetailResponse = {
   result: ResultDetail;
 };
 
+type OrderSummary = {
+  id: string;
+  resultCode: string;
+  visitorName: string;
+  contact: string;
+  productOption: string;
+  consent: boolean;
+  createdAt: string;
+};
+
+type OrdersResponse = {
+  orders: OrderSummary[];
+};
+
 const getElement = <T extends HTMLElement>(id: string): T => {
   const element = document.getElementById(id);
   if (!element) {
@@ -187,10 +201,13 @@ async function loadDetail(code: string): Promise<void> {
 
   try {
     const params = new URLSearchParams({ code: normalized });
-    const data = await fetchJson<ResultDetailResponse>(`/api/results?${params}`);
+    const [data, ordersData] = await Promise.all([
+      fetchJson<ResultDetailResponse>(`/api/results?${params}`),
+      fetchJson<OrdersResponse>(`/api/orders?${params}`),
+    ]);
     selectedCode = data.result.code;
-    renderDetail(data.result);
-    setStatus(`${data.result.code} 상세를 불러왔습니다. 서명 URL은 ${formatDate(data.result.assetUrlExpiresAt)}까지 유효합니다.`);
+    renderDetail(data.result, ordersData.orders);
+    setStatus(`${data.result.code} 상세와 목업 주문 ${ordersData.orders.length}건을 불러왔습니다. 서명 URL은 ${formatDate(data.result.assetUrlExpiresAt)}까지 유효합니다.`);
   } catch (error) {
     renderEmptyDetail(error instanceof Error ? error.message : '상세 결과를 불러오지 못했습니다.');
     setStatus(error instanceof Error ? error.message : '상세 결과를 불러오지 못했습니다.');
@@ -199,7 +216,7 @@ async function loadDetail(code: string): Promise<void> {
   }
 }
 
-function renderDetail(result: ResultDetail): void {
+function renderDetail(result: ResultDetail, orders: OrderSummary[]): void {
   detailContent.replaceChildren();
 
   if (result.posterUrl) {
@@ -230,7 +247,40 @@ function renderDetail(result: ResultDetail): void {
   tileMeta.className = 'tileMeta';
   tileMeta.textContent = JSON.stringify(result.tileMeta, null, 2);
 
-  detailContent.append(metaGrid, assetLinks, tileMeta);
+  detailContent.append(metaGrid, assetLinks, renderOrders(orders), tileMeta);
+}
+
+function renderOrders(orders: OrderSummary[]): HTMLElement {
+  const section = document.createElement('section');
+  section.className = 'ordersBlock';
+
+  const heading = document.createElement('h3');
+  heading.textContent = '목업 주문';
+  section.append(heading);
+
+  if (orders.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'emptyState emptyState--compact';
+    empty.textContent = '이 결과 코드로 저장된 목업 주문이 없습니다.';
+    section.append(empty);
+    return section;
+  }
+
+  const list = document.createElement('div');
+  list.className = 'ordersList';
+  for (const order of orders) {
+    const item = document.createElement('article');
+    item.className = 'orderCard';
+    item.append(
+      summaryCell('Visitor', order.visitorName),
+      summaryCell('Contact', order.contact),
+      summaryCell('Option', productOptionLabel(order.productOption)),
+      summaryCell('Created', formatDate(order.createdAt)),
+    );
+    list.append(item);
+  }
+  section.append(list);
+  return section;
 }
 
 function appendAssetLink(container: HTMLElement, label: string, url: string | null): void {
@@ -268,6 +318,13 @@ function formatDate(value: string): string {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(date);
+}
+
+function productOptionLabel(value: string): string {
+  if (value === 'classic-tote') return 'Classic tote mock';
+  if (value === 'mini-tote') return 'Mini tote mock';
+  if (value === 'flat-pouch') return 'Flat pouch mock';
+  return value;
 }
 
 searchButton.addEventListener('click', () => void loadDetail(codeSearch.value));

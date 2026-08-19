@@ -262,13 +262,13 @@ h2{
   background:var(--admin-surface);
 }
 
-.resultButton span,.metaGrid span{
+.resultButton span,.metaGrid span,.orderCard span{
   color:var(--admin-muted);
   font-size:var(--admin-font-utility);
   font-weight:400;
 }
 
-.resultButton b,.metaGrid b{
+.resultButton b,.metaGrid b,.orderCard b{
   display:block;
   margin-top:var(--admin-space-xxs);
   color:var(--admin-ink);
@@ -325,6 +325,32 @@ h2{
   text-decoration:none;
 }
 
+.ordersBlock{
+  display:grid;
+  gap:var(--admin-space-lg);
+}
+
+.ordersBlock h3{
+  color:var(--admin-ink);
+  font-size:var(--admin-font-body);
+  font-weight:700;
+}
+
+.ordersList{
+  display:grid;
+  gap:var(--admin-space-md);
+}
+
+.orderCard{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:var(--admin-space-lg);
+  padding:var(--admin-space-lg);
+  border:var(--admin-border-hairline) solid var(--admin-hairline);
+  border-radius:var(--admin-radius-sm);
+  background:var(--admin-canvas);
+}
+
 .tileMeta{
   min-height:var(--admin-measure-meta);
   padding:var(--admin-space-lg);
@@ -343,4 +369,10 @@ h2{
   color:var(--admin-muted);
   font-size:var(--admin-font-utility);
   line-height:1.7;
+}
+
+.emptyState--compact{
+  padding:var(--admin-space-lg);
+  border:var(--admin-border-hairline) solid var(--admin-hairline);
+  border-radius:var(--admin-radius-sm);
 }
