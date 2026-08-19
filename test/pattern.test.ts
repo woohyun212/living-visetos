@@ -39,8 +39,8 @@ import {
   getDiamondColorRole,
   getDiamondCell,
   getMotifCellCenter,
-  getMotifGridSafetyMargin,
   getMotifPairSafetyMargin,
+  getMotifSpacingSafetyMargin,
   getMotifRole,
   getUprightDiamondVertices,
   MOTIF_SILHOUETTES,
@@ -577,9 +577,8 @@ test('모티프 외곽은 512와 1024 모두 인접 모티프 최소 여백을 �
         derivePatternGrammar({ ...seed, rhythm, sessionId: `safety-${size}-${rhythm}` }, size),
         size,
       );
-      const margin = getMotifGridSafetyMargin(
+      const margin = getMotifSpacingSafetyMargin(
         grammar.gridSpacing,
-        grammar.gridLineWidth,
         grammar.motifRadius,
       );
       assert.ok(margin >= MIN_MOTIF_SPACING_MARGIN * (size / 1024) - 1e-9);
@@ -597,9 +596,8 @@ test('모든 내부 모티프 변형은 같은 Guard 반경 안에서 중앙·�
       const center = getMotifCellCenter(3, 4, grammar.gridSpacing, grammar.motifPhase);
       const cell = getDiamondCell(center, grammar.gridSpacing);
       assert.deepEqual(cell.center, center);
-      assert.ok(getMotifGridSafetyMargin(
+      assert.ok(getMotifSpacingSafetyMargin(
         grammar.gridSpacing,
-        grammar.gridLineWidth,
         grammar.motifRadius,
       ) >= MIN_MOTIF_SPACING_MARGIN * (size / 1024) - 1e-9);
     }

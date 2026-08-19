@@ -16,8 +16,6 @@ export const MOTIF_VARIANTS = [
   'gem-medallion',
 ] as const;
 export type MotifKind = (typeof MOTIF_VARIANTS)[number];
-/** 기존 내부 import 호환용 별칭. */
-export type MotifVariant = MotifKind;
 
 /** QA와 테스트가 이름이 아닌 실제 외곽 계열의 차이를 확인하는 명시적 분류. */
 export const MOTIF_SILHOUETTES: Readonly<Record<MotifKind, string>> = {
@@ -231,15 +229,6 @@ export function getCellBoundarySafetyMargin(
     motifRadius * MOTIF_EXTENT_FACTOR,
     diamondLongDiagonal / 2,
   );
-}
-
-/** 기존 로컬 QA 호환용. gridLineWidth는 더 이상 연결 격자 여백에 사용하지 않는다. */
-export function getMotifGridSafetyMargin(
-  spacing: number,
-  _gridLineWidth: number,
-  motifRadius: number,
-): number {
-  return getMotifSpacingSafetyMargin(spacing, motifRadius);
 }
 
 /** 인접 모티프가 붙지 않도록 최소 여백을 확보할 수 있는 최대 중심 엠블럼 반지름. */
