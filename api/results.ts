@@ -51,6 +51,15 @@ type AdminResultDetail = AdminResultSummary & {
   assetUrlExpiresAt: string;
 };
 
+type PublicResultDetail = {
+  code: string;
+  patternName: string;
+  issuedAt: string;
+  posterUrl: string | null;
+  videoUrl: string | null;
+  assetUrlExpiresAt: string;
+};
+
 export const config = {
   runtime: 'nodejs',
 };
@@ -118,6 +127,22 @@ async function handleGet(request: Request): Promise<Response> {
     return adminRateFailure;
   }
 
+  const url = new URL(request.url);
+  const code = url.searchParams.get('code');
+  const hasAuthorization = request.headers.has('authorization');
+
+  if (code !== null && !hasAuthorization) {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      return json({ error: 'Result storage is not configured.' }, 503, noStoreHeaders());
+    }
+
+    try {
+      return handlePublicDetail(code);
+    } catch (error) {
+      return errorResponse(error, 'Result lookup failed.', 400, noStoreHeaders());
+    }
+  }
+
   const authFailure = authorizeAdminRequest(request);
   if (authFailure) {
     return authFailure;
@@ -128,9 +153,6 @@ async function handleGet(request: Request): Promise<Response> {
   }
 
   try {
-    const url = new URL(request.url);
-    const code = url.searchParams.get('code');
-
     if (code !== null) {
       return handleDetail(code);
     }
@@ -139,6 +161,22 @@ async function handleGet(request: Request): Promise<Response> {
   } catch (error) {
     return errorResponse(error, 'Result lookup failed.', 400, noStoreHeaders());
   }
+}
+
+async function handlePublicDetail(code: string): Promise<Response> {
+  const safeCode = normalizeResultCode(code);
+  if (!safeCode) {
+    return json({ error: 'Missing result code.' }, 400, noStoreHeaders());
+  }
+
+  const records = await selectResultRecords({ code: safeCode, limit: 1, offset: 0 });
+  const record = records[0];
+  if (!record) {
+    return json({ error: 'Result not found.' }, 404, noStoreHeaders());
+  }
+
+  const result = await toPublicDetail(record);
+  return json({ result }, 200, noStoreHeaders());
 }
 
 async function handleList(searchParams: URLSearchParams): Promise<Response> {
@@ -253,6 +291,23 @@ async function toAdminDetail(record: ResultRecord): Promise<AdminResultDetail> {
     tileMeta: record.tile_meta,
     videoUrl,
     posterUrl,
+    assetUrlExpiresAt: expiresAt,
+  };
+}
+
+async function toPublicDetail(record: ResultRecord): Promise<PublicResultDetail> {
+  const expiresAt = new Date(Date.now() + RESULT_ASSET_URL_TTL_SECONDS * 1000).toISOString();
+  const [posterUrl, videoUrl] = await Promise.all([
+    signStorageObject(record.poster_path),
+    signStorageObject(record.video_path),
+  ]);
+
+  return {
+    code: record.code,
+    patternName: record.pattern_name,
+    issuedAt: record.issued_at,
+    posterUrl,
+    videoUrl,
     assetUrlExpiresAt: expiresAt,
   };
 }
@@ -416,6 +471,7 @@ function rateLimit(request: Request, scope: string, limit: number): Response | n
   }
 
   return json({ error: 'Too many requests.' }, 429, {
+    ...noStoreHeaders(),
     'Retry-After': String(Math.ceil((current.resetAt - now) / 1000)),
   });
 }
