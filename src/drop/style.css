@@ -1,0 +1,371 @@
+@font-face{
+  font-family:"Pretendard Variable";
+  src:url("/assets/fonts/PretendardVariable.woff2") format("woff2-variations");
+  font-weight:45 920;
+  font-style:normal;
+  font-display:swap;
+}
+
+:root{
+  --drop-canvas:#ffffff;
+  --drop-black:#000000;
+  --drop-ink:#222222;
+  --drop-muted:#4e4e4e;
+  --drop-surface:#f5f5f5;
+  --drop-pill:#f4f4f4;
+  --drop-hairline:#f0f0f0;
+  --drop-on-ink:#ffffff;
+  --drop-radius-none:0px;
+  --drop-radius-sm:6px;
+  --drop-radius-panel:16px;
+  --drop-radius-pill:30px;
+  --drop-border-hairline:1px;
+  --drop-border-active:2px;
+  --drop-space-xxs:2px;
+  --drop-space-xs:4px;
+  --drop-space-sm:6px;
+  --drop-space-md:8px;
+  --drop-space-lg:12px;
+  --drop-space-xl:24px;
+  --drop-space-2xl:48px;
+  --drop-measure-page:1188px;
+  --drop-measure-entry:420px;
+  --drop-measure-panel-min:420px;
+  --drop-measure-header:72px;
+  --drop-measure-control:30px;
+  --drop-measure-banner:160px;
+  --drop-font-body:16px;
+  --drop-font-utility:13px;
+  --drop-font-search:24px;
+  --drop-opacity-disabled:.35;
+  --drop-shadow-none:none;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+
+body{
+  min-width:320px;
+  background:var(--drop-canvas);
+  color:var(--drop-ink);
+  font-family:"Pretendard Variable","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  font-size:var(--drop-font-body);
+}
+
+button,input,select{font:inherit;}
+
+button{cursor:pointer;}
+
+button:disabled{cursor:not-allowed;opacity:var(--drop-opacity-disabled);}
+
+.dropShell{
+  width:min(var(--drop-measure-page),calc(100vw - var(--drop-space-2xl)));
+  margin:0 auto;
+  padding:var(--drop-space-xl) 0 var(--drop-space-2xl);
+}
+
+.dropHero{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:var(--drop-space-xl);
+  padding:var(--drop-space-xl) 0;
+  border-bottom:var(--drop-border-hairline) solid var(--drop-hairline);
+}
+
+.eyebrow{
+  color:var(--drop-muted);
+  font-size:var(--drop-font-utility);
+  font-weight:400;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+h1{
+  margin-top:var(--drop-space-xs);
+  color:var(--drop-ink);
+  font-size:var(--drop-font-search);
+  font-weight:700;
+  line-height:1.21;
+  letter-spacing:-.02em;
+}
+
+h2{
+  margin-top:var(--drop-space-xs);
+  color:var(--drop-ink);
+  font-size:var(--drop-font-body);
+  font-weight:700;
+}
+
+h3{
+  color:var(--drop-ink);
+  font-size:var(--drop-font-body);
+  font-weight:700;
+}
+
+.heroCopy{
+  max-width:560px;
+  margin-top:var(--drop-space-lg);
+  color:var(--drop-muted);
+  font-size:var(--drop-font-utility);
+  line-height:1.7;
+}
+
+.heroLinks{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:var(--drop-space-md);
+}
+
+.mockBadge{
+  display:inline-flex;
+  align-items:center;
+  height:var(--drop-measure-control);
+  padding:0 var(--drop-space-md);
+  border:var(--drop-border-active) solid var(--drop-ink);
+  border-radius:var(--drop-radius-pill);
+  color:var(--drop-ink);
+  font-size:var(--drop-font-utility);
+  font-weight:700;
+  letter-spacing:.08em;
+}
+
+.pillLink,.submitButton{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  height:var(--drop-measure-control);
+  padding:0 var(--drop-space-md);
+  border:0;
+  border-radius:var(--drop-radius-pill);
+  background:var(--drop-pill);
+  color:var(--drop-muted);
+  font-size:var(--drop-font-utility);
+  font-weight:400;
+  text-decoration:none;
+}
+
+.submitButton{
+  width:max-content;
+  background:var(--drop-ink);
+  color:var(--drop-on-ink);
+}
+
+.statusBand{
+  min-height:var(--drop-measure-control);
+  margin-top:var(--drop-space-xl);
+  padding:var(--drop-space-md) var(--drop-space-lg);
+  border:var(--drop-border-hairline) solid var(--drop-hairline);
+  border-radius:var(--drop-radius-sm);
+  background:var(--drop-surface);
+  color:var(--drop-muted);
+  font-size:var(--drop-font-utility);
+  line-height:1.5;
+}
+
+.bannerFrame{
+  overflow:hidden;
+  height:var(--drop-measure-banner);
+  margin-top:var(--drop-space-xl);
+  border:var(--drop-border-hairline) solid var(--drop-hairline);
+  border-radius:var(--drop-radius-panel);
+  background:var(--drop-surface);
+}
+
+.bannerFrame canvas{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.dropMeta{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:var(--drop-space-lg);
+  margin-top:var(--drop-space-xl);
+  padding:var(--drop-space-xl);
+  border:var(--drop-border-hairline) solid var(--drop-hairline);
+  border-radius:var(--drop-radius-panel);
+}
+
+.dropMeta span,.seasonMeta span,.entryForm label>span,.mockNotice,.formStatus,.emptyState{
+  color:var(--drop-muted);
+  font-size:var(--drop-font-utility);
+  font-weight:400;
+  line-height:1.7;
+}
+
+.dropMeta b,.seasonMeta b{
+  display:block;
+  margin-top:var(--drop-space-xxs);
+  color:var(--drop-ink);
+  font-size:var(--drop-font-utility);
+  font-weight:700;
+}
+
+.dropGrid{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) var(--drop-measure-entry);
+  gap:var(--drop-space-xl);
+  margin-top:var(--drop-space-xl);
+}
+
+.seasonPanel,.entryPanel{
+  min-height:var(--drop-measure-panel-min);
+  border:var(--drop-border-hairline) solid var(--drop-hairline);
+  border-radius:var(--drop-radius-panel);
+  background:var(--drop-canvas);
+  box-shadow:var(--drop-shadow-none);
+  overflow:hidden;
+}
+
+.panelHeader{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:var(--drop-space-lg);
+  min-height:var(--drop-measure-header);
+  padding:var(--drop-space-lg) var(--drop-space-xl);
+  border-bottom:var(--drop-border-hairline) solid var(--drop-hairline);
+}
+
+.seasonGrid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:var(--drop-space-lg);
+  padding:var(--drop-space-xl);
+}
+
+.seasonCard{
+  display:grid;
+  gap:var(--drop-space-lg);
+  padding:var(--drop-space-lg);
+  border:var(--drop-border-hairline) solid var(--drop-hairline);
+  border-radius:var(--drop-radius-sm);
+  cursor:pointer;
+}
+
+.seasonCard:has(input:checked){
+  border:var(--drop-border-active) solid var(--drop-ink);
+  padding:calc(var(--drop-space-lg) - 1px);
+}
+
+.seasonCard input{
+  position:absolute;
+  width:1px;
+  height:1px;
+  overflow:hidden;
+  clip-path:inset(50%);
+}
+
+.seasonFrame{
+  overflow:hidden;
+  border-radius:var(--drop-radius-sm);
+  background:var(--drop-surface);
+  aspect-ratio:1/1;
+}
+
+.seasonFrame canvas{
+  display:block;
+  width:100%;
+  height:100%;
+}
+
+.seasonName{
+  display:grid;
+  gap:var(--drop-space-xs);
+}
+
+.seasonStory{
+  color:var(--drop-muted);
+  font-size:var(--drop-font-utility);
+  line-height:1.7;
+}
+
+.seasonMeta{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:var(--drop-space-md);
+}
+
+.paletteRow{
+  display:flex;
+  gap:var(--drop-space-xs);
+}
+
+.paletteRow i{
+  width:var(--drop-space-xl);
+  height:var(--drop-space-lg);
+  border:var(--drop-border-hairline) solid var(--drop-hairline);
+  border-radius:var(--drop-radius-none);
+}
+
+.selectHint{
+  color:var(--drop-muted);
+  font-size:var(--drop-font-utility);
+}
+
+.seasonCard:has(input:checked) .selectHint{
+  color:var(--drop-ink);
+  font-weight:700;
+}
+
+.entryForm{
+  display:grid;
+  gap:var(--drop-space-xl);
+  padding:var(--drop-space-xl);
+}
+
+.entryForm label{
+  display:grid;
+  gap:var(--drop-space-md);
+}
+
+.entryForm input[type="text"],.entryForm select{
+  width:100%;
+  height:44px;
+  padding:0 var(--drop-space-lg);
+  border:var(--drop-border-hairline) solid var(--drop-hairline);
+  border-radius:var(--drop-radius-sm);
+  background:var(--drop-canvas);
+  color:var(--drop-black);
+  font-size:var(--drop-font-body);
+  outline:none;
+}
+
+.selectedSeason b{
+  display:block;
+  margin-top:var(--drop-space-xxs);
+  color:var(--drop-ink);
+  font-size:var(--drop-font-utility);
+  font-weight:700;
+}
+
+.selectedSeason{
+  padding:var(--drop-space-lg);
+  border:var(--drop-border-hairline) solid var(--drop-hairline);
+  border-radius:var(--drop-radius-sm);
+  background:var(--drop-surface);
+}
+
+.consentRow{
+  grid-template-columns:auto minmax(0,1fr);
+  align-items:start;
+}
+
+.consentRow input{
+  width:16px;
+  height:16px;
+  margin-top:3px;
+  accent-color:var(--drop-ink);
+}
+
+.formStatus{min-height:22px;}
+
+.emptyState{padding:var(--drop-space-xl);}
+
+@media(max-width:900px){
+  .dropShell{width:min(100% - var(--drop-space-xl),var(--drop-measure-page));}
+  .dropHero,.dropGrid,.dropMeta,.seasonGrid{display:grid;grid-template-columns:1fr;}
+}
