@@ -45,15 +45,24 @@ export function normalizeHexColor(value: unknown, fallback: string): string {
   return typeof value === 'string' && HEX_COLOR.test(value) ? value.toUpperCase() : fallback;
 }
 
+/** 정책 없는 범용 색 혼합. 사용자색이 섞이는 경로에는 mixUserColor 를 쓴다. */
 export function mixHexColors(hexA: string, hexB: string, amount: number): string {
   const colorA = normalizeHexColor(hexA, DARK);
   const colorB = normalizeHexColor(hexB, DARK);
-  const ratio = clamp(amount, 0, MAX_ACCENT_MIX);
+  const ratio = clamp(amount, 0, 1);
   const channel = (color: string, index: number) => Number.parseInt(color.slice(index, index + 2), 16);
   const mixed = [1, 3, 5].map((index) => Math.round(
     channel(colorA, index) + (channel(colorB, index) - channel(colorA, index)) * ratio,
   ).toString(16).padStart(2, '0'));
   return `#${mixed.join('')}`.toUpperCase();
+}
+
+/**
+ * 관객색(FeatureSeed.dominantColors)이 섞이는 유일한 통로. 브랜드 정체성 가드레일인
+ * 35% 상한을 여기서 하드 클램프하므로, 사용자색은 반드시 이 함수를 거쳐야 한다.
+ */
+export function mixUserColor(brandHex: string, userHex: string, amount: number): string {
+  return mixHexColors(brandHex, userHex, clamp(amount, 0, MAX_ACCENT_MIX));
 }
 
 export function colorLuminance(hex: string): number {
@@ -81,12 +90,19 @@ export function createDiamondPalette(
     const userColor = normalizeHexColor(input, fallback);
     for (let step = Math.round(safeMix * 100); step >= 0; step -= 1) {
       const amount = step / 100;
-      const color = mixHexColors(DARK, userColor, amount);
+      const color = mixUserColor(DARK, userColor, amount);
       if (Math.abs(colorLuminance(color) - backgroundLuminance)
         >= MIN_DIAMOND_BACKGROUND_LUMINANCE_DELTA) {
         return { color, amount };
       }
     }
+    // 0%까지 낮춰도 배경과 최소 명도차를 못 만드는 입력. 관객색을 버리고 DARK 로
+    // 되돌리는 것이 유일한 안전 선택이지만, 조용히 넘기면 저대비 타일의 원인을
+    // 추적할 수 없어 경고를 남긴다.
+    console.warn(
+      '[pattern:guard] 배경 대비를 확보하지 못해 관객색을 버리고 DARK로 대체합니다',
+      { userColor: normalizeHexColor(input, fallback), background },
+    );
     return { color: DARK, amount: 0 };
   };
   // 색상 역할: [0] 배경/보조 diamond, [1] 주 diamond, [2] 엠블럼/point diamond.
@@ -193,11 +209,6 @@ export function guardPatternGrammar(
   const diamondColorStrides = [3, 7, 9] as const;
   return {
     gridSpacing,
-    gridAngleDeg: clamp(
-      grammar.gridAngleDeg,
-      GRAMMAR_LIMITS.gridAngleDeg.min,
-      GRAMMAR_LIMITS.gridAngleDeg.max,
-    ),
     gridLineWidth,
     motifRadius,
     motifFrequency: Math.round(

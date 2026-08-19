@@ -9,8 +9,24 @@
  *    이 파일의 시그니처는 유지하고 내부만 구현할 것.
  */
 import type { FeatureSeed, PatternTile } from '../contracts.ts';
+import { resolveTileSize, type SupportedTileSize } from './constants.ts';
+import { isPatternTileValid } from './guard.ts';
 
 export const L2_TIMEOUT_MS = 8000; // 성능 예산(ARCHITECTURE §8): 초과 시 포기
+
+/**
+ * L2 승격 타일의 단일 관문. 생성AI 결과라도 계약(크기·팔레트·메타)을 통과하지
+ * 못하면 화면에 올리지 않고 null 로 떨어뜨려 L1 을 유지한다. 실제 생성AI 연결
+ * (TODO(B))은 반드시 이 함수를 거쳐 반환할 것 — 호출부는 이미 통과했다고 가정한다.
+ */
+export function acceptPromotedTile(
+  tile: PatternTile | null | undefined,
+  tileSize: SupportedTileSize = resolveTileSize(undefined),
+): PatternTile | null {
+  if (isPatternTileValid(tile, tileSize, 'L2')) return tile;
+  if (tile) console.warn('[pattern:L2] 승격 타일이 계약 검증에 실패해 L1을 유지합니다');
+  return null;
+}
 
 export interface PromoteOptions {
   timeoutMs?: number;
@@ -24,6 +40,6 @@ export async function promoteToL2(
   _seed: FeatureSeed,
   _options: PromoteOptions = {},
 ): Promise<PatternTile | null> {
-  // TODO(B): 생성AI 요청 → 1024 타일 수신 → Grammar Guard 통과 → version:'L2' 로 반환
-  return null;
+  // TODO(B): 생성AI 요청 → 1024 타일 수신 → version:'L2' 로 구성 후 acceptPromotedTile 통과
+  return acceptPromotedTile(null);
 }

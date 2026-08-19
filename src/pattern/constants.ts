@@ -35,13 +35,10 @@ export const DIAMOND_COLOR_CYCLE_LENGTH = 20;
 /** 0~255 가중 명도 기준. 사용자색 혼합을 낮춰서 확보하는 최소 차이. */
 export const MIN_DIAMOND_BACKGROUND_LUMINANCE_DELTA = 42;
 export const EMBLEM_VISUAL_SIZE_RATIO = { min: 0.52, max: 0.64 } as const;
-/** 기존 로컬 QA 호환용 별칭. 실제 의미는 인접 모티프 사이 최소 여백이다. */
-export const MIN_MOTIF_GRID_MARGIN = MIN_MOTIF_SPACING_MARGIN;
 
 /** 모든 픽셀 범위는 1024px 타일 기준이며 512px에서는 비율로 축소한다. */
 export const GRAMMAR_LIMITS = {
   gridSpacing: { min: 64, max: 132 },
-  gridAngleDeg: { min: 45, max: 45 },
   gridLineWidth: { min: 2.5, max: 5.5 },
   motifRadius: { min: 18, max: 44 },
   motifFrequency: { min: 2, max: 5 },

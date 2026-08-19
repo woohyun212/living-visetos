@@ -15,7 +15,7 @@ import {
   MIN_DIAMOND_BACKGROUND_LUMINANCE_DELTA,
   MIN_DIAMOND_LONG_DIAGONAL,
   MIN_EMBLEM_VISUAL_SIZE,
-  MIN_MOTIF_GRID_MARGIN,
+  MIN_MOTIF_SPACING_MARGIN,
   MIN_MOTIF_PAIR_MARGIN,
   resolveTileSize,
 } from '../src/pattern/constants.ts';
@@ -26,9 +26,11 @@ import {
   guardPatternGrammar,
   isPatternTileValid,
   mixHexColors,
+  mixUserColor,
   normalizeFeatureSeed,
 } from '../src/pattern/guard.ts';
-import { generateTile, paintTile, resolvePatternColors, TILE_SIZE } from '../src/pattern/l1.ts';
+import { createSeedRef, generateTile, paintTile, resolvePatternColors } from '../src/pattern/l1.ts';
+import { acceptPromotedTile } from '../src/pattern/l2.ts';
 import {
   DIAMOND_VARIANTS,
   EMBLEM_AXIS_ANGLE,
@@ -106,7 +108,6 @@ test('FeatureSeed 범위, 비정상 숫자, 색상과 빈 세션을 정규화한
 test('문법값은 허용 범위와 accent 35% 상한 안에 있다', () => {
   const unsafe: PatternGrammar = {
     gridSpacing: Infinity,
-    gridAngleDeg: 10,
     gridLineWidth: 100,
     motifRadius: -10,
     motifFrequency: 99,
@@ -130,7 +131,6 @@ test('문법값은 허용 범위와 accent 35% 상한 안에 있다', () => {
     diamondLongDiagonal: Infinity,
   };
   const guarded = guardPatternGrammar(unsafe, 1024);
-  assert.equal(guarded.gridAngleDeg, 45);
   assert.ok(guarded.gridSpacing >= GRAMMAR_LIMITS.gridSpacing.min);
   assert.ok(guarded.gridSpacing <= GRAMMAR_LIMITS.gridSpacing.max);
   assert.ok(guarded.accentMix <= MAX_ACCENT_MIX);
@@ -456,7 +456,7 @@ test('generateTile 기본 출력은 정확히 1024×1024 PatternTile이다', asy
   });
   try {
     const tile = await generateTile(seed);
-    assert.equal(TILE_SIZE, 1024);
+    assert.equal(DEFAULT_TILE_SIZE, 1024);
     assert.equal(tile.bitmap.width, 1024);
     assert.equal(tile.bitmap.height, 1024);
     assert.equal(tile.version, 'L1');
@@ -582,7 +582,7 @@ test('모티프 외곽은 512와 1024 모두 인접 모티프 최소 여백을 �
         grammar.gridLineWidth,
         grammar.motifRadius,
       );
-      assert.ok(margin >= MIN_MOTIF_GRID_MARGIN * (size / 1024) - 1e-9);
+      assert.ok(margin >= MIN_MOTIF_SPACING_MARGIN * (size / 1024) - 1e-9);
     }
   }
 });
@@ -601,7 +601,7 @@ test('모든 내부 모티프 변형은 같은 Guard 반경 안에서 중앙·�
         grammar.gridSpacing,
         grammar.gridLineWidth,
         grammar.motifRadius,
-      ) >= MIN_MOTIF_GRID_MARGIN * (size / 1024) - 1e-9);
+      ) >= MIN_MOTIF_SPACING_MARGIN * (size / 1024) - 1e-9);
     }
   }
 });
@@ -759,4 +759,68 @@ test('PatternTile 공개 계약과 F-03·F-04 동일 객체 전달 연결을 유
   const mainSource = readFileSync(new URL('../src/main.ts', import.meta.url), 'utf8');
   assert.match(mainSource, /overlay\.setTile\(tile\)/);
   assert.match(mainSource, /bag\?\.applyTile\(tile\)/);
+});
+
+
+function strokeColors(commands: readonly string[]): string[] {
+  return commands
+    .filter((command) => command.startsWith('stroke:'))
+    .map((command) => command.split(':')[1]!);
+}
+
+test('accentPlacement alternating-cells는 모든 세션에서 실제로 교대한다', () => {
+  let checked = 0;
+  for (let index = 0; index < 400 && checked < 60; index += 1) {
+    const candidate: FeatureSeed = {
+      dominantColors: ['#336699', '#AA7744', '#8844CC'],
+      motionEnergy: (index % 11) / 10,
+      rhythm: (index % 7) / 6,
+      sessionId: `alt-session-${index}`,
+    };
+    const grammar = guardPatternGrammar(derivePatternGrammar(candidate, 1024), 1024);
+    if (grammar.accentPlacement !== 'alternating-cells') continue;
+    checked += 1;
+    const colors = resolvePatternColors(candidate, grammar);
+    assert.notEqual(colors.accent, colors.emblemBase);
+    const used = new Set(strokeColors(recordPaintCommands(candidate)));
+    // accent 셀과 비-accent 셀이 둘 다 존재해야 '교대'다.
+    assert.ok(used.has(colors.accent), `accent 셀 0개: ${candidate.sessionId}`);
+    assert.ok(used.has(colors.emblemBase), `비-accent 셀 0개: ${candidate.sessionId}`);
+  }
+  assert.ok(checked >= 20, `alternating-cells 표본 부족: ${checked}`);
+});
+
+test('meta.seedRef는 세션을 식별하고 같은 시드에서 재현된다', () => {
+  const a: FeatureSeed = { ...seed, sessionId: 'seedref-a' };
+  const b: FeatureSeed = { ...seed, sessionId: 'seedref-b' };
+  assert.equal(createSeedRef(a), createSeedRef(a));
+  assert.notEqual(createSeedRef(a), createSeedRef(b));
+  // 옷 색만 같고 세션이 다른 두 관객이 같은 식별자를 갖지 않아야 한다.
+  assert.deepEqual(a.dominantColors, b.dominantColors);
+  assert.match(createSeedRef(a), /^f02-[0-9a-f]{8}$/);
+  // dominantColors 단독 hex 였던 회귀를 막는다.
+  assert.notEqual(createSeedRef(a), a.dominantColors[0]);
+});
+
+test('L2 승격 타일은 Grammar Guard를 통과해야만 채택된다', () => {
+  const valid = {
+    bitmap: { width: 1024, height: 1024, close: () => undefined } as ImageBitmap,
+    version: 'L2',
+    meta: { palette: ['#A9652C'], spacing: 64, motifDensity: 16, seedRef: 'f02-deadbeef' },
+  } as const;
+  assert.equal(acceptPromotedTile(valid), valid);
+  assert.equal(acceptPromotedTile(null), null);
+  // 잘못된 크기·버전·메타는 전부 거부되어 L1이 유지된다.
+  assert.equal(acceptPromotedTile({ ...valid, bitmap: { ...valid.bitmap, width: 512 } } as never), null);
+  assert.equal(acceptPromotedTile({ ...valid, version: 'L1' } as never), null);
+  assert.equal(acceptPromotedTile({ ...valid, meta: { ...valid.meta, seedRef: '' } } as never), null);
+  const mainSource = readFileSync(new URL('../src/main.ts', import.meta.url), 'utf8');
+  assert.match(mainSource, /acceptPromotedTile/);
+});
+
+test('35% 상한은 범용 혼합이 아니라 관객색 경로에만 걸린다', () => {
+  // 범용 유틸은 브랜드색끼리 100%까지 섞을 수 있어야 한다.
+  assert.equal(mixHexColors(DARK, '#FFFFFF', 1), '#FFFFFF');
+  // 관객색 경로는 요청이 100%여도 35%로 잘린다.
+  assert.equal(mixUserColor(DARK, '#FFFFFF', 1), mixHexColors(DARK, '#FFFFFF', MAX_ACCENT_MIX));
 });

@@ -11,7 +11,7 @@ import { CaptureService } from './vision/capture.ts';
 import { Segmenter } from './vision/segmenter.ts';
 import { extractSeed } from './vision/seed.ts';
 import { generateTile } from './pattern/l1.ts';
-import { promoteToL2 } from './pattern/l2.ts';
+import { acceptPromotedTile, promoteToL2 } from './pattern/l2.ts';
 import { OverlayLayer } from './render/overlay.ts';
 import { BagLayer } from './render/bag.ts';
 
@@ -78,7 +78,9 @@ async function runTile(): Promise<void> {
   setStatus('패턴 생성 완료 → 3번(오버레이) 또는 4번(가방)');
 
   // L2 승격: 도착하면 조용히 갈아 끼우고, 실패하면 아무 일도 일어나지 않는다.
-  void promoteToL2(session.seed).then((better) => better && applyTile(better));
+  void promoteToL2(session.seed)
+    .then((better) => acceptPromotedTile(better))
+    .then((verified) => verified && applyTile(verified));
 }
 function applyTile(tile: PatternTile): void {
   session.tile = tile;

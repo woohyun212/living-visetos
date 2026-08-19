@@ -111,7 +111,16 @@ function resolveListValue<T>(values: readonly T[], index: number): T {
   return values[((safeIndex % values.length) + values.length) % values.length]!;
 }
 
-/** 셀 좌표만으로 반복되는 배치 규칙. 셀마다 난수를 사용하지 않는다. */
+/**
+ * 셀 좌표만으로 반복되는 배치 규칙. 셀마다 난수를 사용하지 않는다.
+ *
+ * 격자 자체를 45° 회전시키던 v0 스켈레톤과 달리, 여기서는 격자를 직교로 두고
+ * 다이아몬드를 '모티프 형태'로 배치한다. 회전 격자는 타일 경계에서 셀이 잘려
+ * seamless 반복이 깨지고, 엠블럼 외곽이 축에 대해 기울어져 문법 Guard의
+ * 여백·크기 검증을 좌표계마다 다시 정의해야 했다. 직교 체커보드는 다이아 리듬을
+ * 유지하면서 이 두 문제를 동시에 없앤다. 따라서 격자 각도는 더 이상 문법 파라미터가
+ * 아니며 `gridAngleDeg`는 제거되었다.
+ */
 export function getMotifRole(
   pattern: PlacementPattern,
   column: number,
@@ -139,7 +148,7 @@ export function getPatternStyle(motionEnergy: number): PatternStyle {
   return 'dynamic';
 }
 
-function positiveModulo(value: number, modulo: number): number {
+export function positiveModulo(value: number, modulo: number): number {
   return ((value % modulo) + modulo) % modulo;
 }
 

@@ -24,7 +24,6 @@ import { createDeterministicRandom, hashString } from './random.ts';
 
 export interface PatternGrammar {
   gridSpacing: number;
-  gridAngleDeg: number;
   gridLineWidth: number;
   motifRadius: number;
   motifFrequency: number;
@@ -84,7 +83,6 @@ export function derivePatternGrammar(
 
   return {
     gridSpacing,
-    gridAngleDeg: 45,
     gridLineWidth: (2.5 + seed.rhythm * 3) * scale,
     // motion 단계가 실제 엠블럼 크기를 정하고 rhythm은 전체 크기를 바꾸지 않는다.
     motifRadius: emblemVisualSize / 1.76,

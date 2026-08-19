@@ -5,7 +5,6 @@ import {
   COGNAC,
   CREAM,
   DARK,
-  DEFAULT_TILE_SIZE,
   MOTIF_EXTENT_FACTOR,
   resolveTileSize,
   type SupportedTileSize,
@@ -16,6 +15,7 @@ import {
   createDiamondPalette,
   isPatternTileValid,
   mixHexColors,
+  mixUserColor,
   normalizeFeatureSeed,
   normalizeHexColor,
 } from './guard.ts';
@@ -25,14 +25,21 @@ import {
   getDiamondColorRole,
   getMotifRole,
   getUprightDiamondVertices,
+  positiveModulo,
   type MotifDetailVariant,
   type MotifKind,
   type MotifRole,
 } from './motif.ts';
+import { createSeedKey, hashString } from './random.ts';
 import { drawWrappedMotif } from './seamless.ts';
 
-/** 기존 소비자 호환용 별칭. 새 코드는 DEFAULT_TILE_SIZE를 사용한다. */
-export const TILE_SIZE = DEFAULT_TILE_SIZE;
+/**
+ * 재현·디버깅용 시드 식별자. dominantColors[0] 만으로는 옷 색이 비슷한 서로 다른
+ * 세션이 같은 값을 갖기 때문에, FeatureSeed 전체(sessionId 포함)를 결정적으로 해싱한다.
+ */
+export function createSeedRef(seed: FeatureSeed): string {
+  return `f02-${hashString(createSeedKey(seed)).toString(16).padStart(8, '0')}`;
+}
 
 export interface GenerateTileOptions {
   tileSize?: SupportedTileSize | number;
@@ -47,10 +54,20 @@ export interface ResolvedPatternColors {
   diamondPalette: ReturnType<typeof createDiamondPalette>;
 }
 
+/** 브랜드색끼리의 혼합. 정책 클램프가 없으므로 관객색에는 쓰지 않는다. */
 export function mix(hexA: string, hexB: string, amount: number): string {
   return mixHexColors(
     normalizeHexColor(hexA, COGNAC),
     normalizeHexColor(hexB, COGNAC),
+    amount,
+  );
+}
+
+/** 관객색(dominantColors)이 브랜드색에 섞이는 경로. 35% 상한이 강제된다. */
+export function mixUser(brandHex: string, userHex: string, amount: number): string {
+  return mixUserColor(
+    normalizeHexColor(brandHex, COGNAC),
+    normalizeHexColor(userHex, COGNAC),
     amount,
   );
 }
@@ -63,15 +80,15 @@ export function resolvePatternColors(
   const seed = normalizeFeatureSeed(inputSeed);
   const isDark = grammar.paletteMode === 'dark';
   const brandBackground = isDark ? mix(COGNAC, DARK, 0.18) : mix(COGNAC, CREAM, 0.08);
-  const background = mix(
+  const background = mixUser(
     brandBackground,
     seed.dominantColors[0],
     BACKGROUND_USER_COLOR_MIX,
   );
   const emblemBase = isDark ? CREAM : DARK;
   const detailBase = isDark ? COGNAC : CREAM;
-  const accent = mix(emblemBase, seed.dominantColors[2], grammar.accentMix);
-  const secondaryAccent = mix(emblemBase, seed.dominantColors[1], grammar.accentMix);
+  const accent = mixUser(emblemBase, seed.dominantColors[2], grammar.accentMix);
+  const secondaryAccent = mixUser(emblemBase, seed.dominantColors[1], grammar.accentMix);
   return {
     background,
     emblemBase,
@@ -263,7 +280,14 @@ function drawMotifs(
     if (grammar.accentPlacement === 'motif-center') {
       return { main: emblemBase, detail: detailBase, center: role === 'primary' ? accent : secondaryAccent };
     }
-    const alternating = (column + row + grammar.accentCellOffset) % grammar.motifFrequency === 0
+    // 엠블럼 셀은 (column + row)가 항상 짝수라 raw 합을 주기로 쓰면 motifFrequency가
+    // 짝수일 때 잔여류가 한쪽으로 고정된다(offset 짝수→전부 accent, 홀수→accent 0개).
+    // 짝수 합을 엠블럼 순번으로 환산해야 offset과 무관하게 1/motifFrequency 주기가 선다.
+    const emblemIndex = (column + row) / 2;
+    const alternating = positiveModulo(
+      emblemIndex + grammar.accentCellOffset,
+      grammar.motifFrequency,
+    ) === 0
       ? accent
       : emblemBase;
     return { main: alternating, detail: detailBase, center: secondaryAccent };
@@ -351,7 +375,7 @@ function paintFallbackTile(canvas: HTMLCanvasElement): PatternTile['meta'] {
       });
     }
   }
-  return { palette: [COGNAC, DARK, CREAM], spacing, motifDensity: 8, seedRef: COGNAC };
+  return { palette: [COGNAC, DARK, CREAM], spacing, motifDensity: 8, seedRef: 'f02-fallback' };
 }
 
 /** 타일 캔버스에 패턴을 그리고 계약 메타를 반환한다. */
@@ -394,7 +418,7 @@ export function paintTile(canvas: HTMLCanvasElement, inputSeed: FeatureSeed): Pa
     ],
     spacing: +grammar.gridSpacing.toFixed(2),
     motifDensity: +(tileSize / grammar.gridSpacing).toFixed(2),
-    seedRef: seed.dominantColors[0],
+    seedRef: createSeedRef(seed),
   };
 }
 
@@ -416,11 +440,20 @@ export async function generateTile(
     meta = paintFallbackTile(canvas);
   }
 
-  const bitmap = await createImageBitmap(canvas);
-  const tile: PatternTile = { bitmap, version: 'L1', meta };
+  let bitmap = await createImageBitmap(canvas);
+  let tile: PatternTile = { bitmap, version: 'L1', meta };
   if (!isPatternTileValid(tile, tileSize, 'L1')) {
+    // 폴백 매트릭스: CREATE 는 어떤 경우에도 멈추지 않는다. 렌더가 아니라 계약
+    // 검증에서 떨어져도 안전 타일로 한 번 더 시도한 뒤에야 실패로 처리한다.
+    console.warn('[pattern:L1] 타일 계약 검증 실패 — 안전한 기본 타일로 폴백합니다');
     bitmap.close();
-    throw new Error('L1 PatternTile 검증에 실패했습니다');
+    meta = paintFallbackTile(canvas);
+    bitmap = await createImageBitmap(canvas);
+    tile = { bitmap, version: 'L1', meta };
+    if (!isPatternTileValid(tile, tileSize, 'L1')) {
+      bitmap.close();
+      throw new Error('L1 PatternTile 검증에 실패했습니다');
+    }
   }
 
   if (previewCanvas) {
