@@ -11,7 +11,8 @@
  * URL `?debug=1` 이면 풀스크린 연출·자동 진행·타임아웃을 끄고 예전처럼 버튼으로만 움직인다.
  */
 import { KioskFlow, type KioskStep, type KioskSteps } from './app/kiosk.ts';
-import { KioskView } from './app/kiosk-view.ts';
+import { KioskView, type KioskScreen } from './app/kiosk-view.ts';
+import { StageView } from './app/stage.ts';
 import { StateMachine } from './app/state.ts';
 import type { DeliveryTicket, FeatureSeed, PatternTile } from './contracts.ts';
 import { drawQrCode, toScannableUrl, toShortUrlLabel } from './output/qr.ts';
@@ -150,6 +151,8 @@ async function runSeed(): Promise<void> {
   });
   $('seedInfo').textContent =
     `motionEnergy ${session.seed.motionEnergy} · rhythm ${session.seed.rhythm}`;
+  // 무대 연출: 방금 뽑힌 색 3개가 관객 화면에 떠오른다 (요구사항 3).
+  stage?.revealSeedColors(session.seed.dominantColors);
   $<HTMLButtonElement>('btnTile').disabled = false;
   renderContract();
 }
@@ -186,6 +189,7 @@ function setOverlay(on: boolean): void {
     overlay.stop();
     btn.textContent = '3. 실루엣 오버레이 (C)';
   }
+  stage?.setOverlayVisible(on); // 무대에서는 오버레이가 페이드로 떠오른다
 }
 const toggleOverlay = (): void => setOverlay(!overlay.isRunning);
 
@@ -295,7 +299,16 @@ const steps: KioskSteps = {
 };
 
 const machine = new StateMachine();
-const view = new KioskView({ chrome: !DEBUG_MODE });
+/*
+ * 기본 모드는 관객용 무대(1080×1920 세로), ?debug=1 은 예전 계기판 그대로.
+ * 두 화면 모두 KioskScreen 이므로 여정 배선(KioskFlow)은 어느 쪽인지 알 필요가 없다.
+ * StageView 는 생성자에서 video/#overlayCanvas/#bagWrap/#resultCard 를 무대 안으로 옮긴다 —
+ * 노드를 옮길 뿐 지우지 않으므로 canDeliver() 의 레이아웃 검사도 그대로 통과한다.
+ */
+const stage: StageView | null = DEBUG_MODE
+  ? null
+  : new StageView({ video, overlayCanvas, bagWrap: $('bagWrap'), resultCard });
+const view: KioskScreen = stage ?? new KioskView({ chrome: false });
 const flow = new KioskFlow({ machine, view, steps, debug: DEBUG_MODE });
 
 const BUTTON_STEPS: [string, KioskStep][] = [

@@ -1,0 +1,503 @@
+/* ── E · 무대(Stage) 스타일 — 세로 비디오월 1080×1920 ───────────────────────
+ *
+ * 여기의 디자인 언어는 DESIGN.md(화이트/차콜)가 **아니다**.
+ * DESIGN.md 는 웹 서피스(result/admin/drop)용이고, 무대는 어두운 발표장을 전제한
+ * 비세토스 무드 — 다크 스테이지 베이스 위에서 패턴이 주인공이다.
+ *
+ * 모든 규칙은 `.is-stage`(관객 모드) 안에만 있다. `?debug=1` 계기판은 이 파일을
+ * 한 줄도 건드리지 않는다.
+ *
+ * ⚠️ 장면 전환은 opacity 로만 한다. display:none / [hidden] 을 쓰면 그 안의
+ *    #overlayCanvas 가 레이아웃에서 빠져 main.ts 의 canDeliver() 가 막히고
+ *    OWN 단계 녹화가 조용히 실패한다.
+ */
+
+.is-stage {
+  --st-ivory: #f7f3ec;
+  --st-cognac: #a9652c;
+  --st-dark: #181512;
+  --st-gold: #c9a227;
+  --st-ink: #0e0c0a; /* 무대 바닥 — 다크보다 한 단 더 내려 패턴을 띄운다 */
+  --st-veil: rgba(14, 12, 10, 0.72);
+  --st-font: 'Pretendard Variable', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --st-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  overflow: hidden;
+  padding: 0;
+  background: var(--st-ink);
+}
+
+/* 개발자 계기판은 무대 뒤로 접는다. 무대가 필요로 하는 노드(video/#overlayCanvas/
+   #bagWrap/#resultCard)는 StageView 생성자가 이미 무대 안으로 옮겨온 뒤다. */
+.is-stage > h1,
+.is-stage > .sub,
+.is-stage > .btns,
+.is-stage > #status,
+.is-stage > .deliveryPanel,
+.is-stage > .grid,
+.is-stage > #contract,
+.is-stage > .stateBadge,
+.is-stage > .kioskOverlay {
+  display: none;
+}
+
+/* ── 무대 프레임 ─────────────────────────────────────────────
+   .stageRoot 은 화면 전체를 덮는 검은 극장, .stageFrame 은 1080×1920 로 고정된
+   무대 그 자체다. 창 비율이 달라도 스케일만 바뀌고(cover) 레터박스는 생기지 않는다.
+   프레임 안의 좌표는 항상 1080×1920 — 디자인 수치를 그대로 쓸 수 있다. */
+.stageRoot {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  overflow: hidden;
+  background: var(--st-ink);
+  color: var(--st-ivory);
+  font-family: var(--st-font);
+  cursor: none; /* 무인 전시 — 커서는 관객에게 보이지 않는다 */
+}
+
+.stageFrame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1080px;
+  height: 1920px;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+/* ── 배경 레이어 ─────────────────────────────────────────────── */
+.stageIdle,
+.stageCamera {
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.8s var(--st-ease);
+}
+
+/* ATTRACT/CONSENT 의 유휴 패턴 루프 (L1 엔진, 고정 시드 순환) */
+.stageIdle {
+  opacity: 0;
+}
+.stageIdleCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* 카메라 미러 스테이지 — video 와 #overlayCanvas 가 같은 박스를 공유해야
+   거울 정합이 유지된다(둘 다 object-fit:cover, 같은 화면비 백킹스토어). */
+.stageCamera {
+  opacity: 0;
+  background: #000;
+}
+.is-stage .stageCamera > video,
+.is-stage .stageCamera > canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.is-stage .stageCamera > video {
+  transform: scaleX(-1);
+}
+/* 씨앗 추출 직후 실루엣 오버레이가 떠오른다 (요구사항 3). */
+.is-stage .stageCamera > canvas {
+  opacity: 0;
+  transition: opacity 0.8s var(--st-ease);
+  pointer-events: none;
+}
+.stageCamera[data-overlay='on'] > canvas {
+  opacity: 1;
+}
+
+/* 무대 바닥으로 가라앉는 비네트 — 하단 자막·카드의 가독성을 만든다. */
+.stageVeil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 70% at 50% 30%, transparent 40%, rgba(14, 12, 10, 0.55) 100%),
+    linear-gradient(180deg, rgba(14, 12, 10, 0.55) 0%, transparent 22%, transparent 58%, rgba(14, 12, 10, 0.88) 100%);
+}
+
+/* 장면 전환 상태 (data-scene = KioskState) */
+.stageRoot[data-scene='ATTRACT'] .stageIdle,
+.stageRoot[data-scene='CONSENT'] .stageIdle,
+.stageRoot[data-scene='RESET'] .stageIdle,
+.stageRoot[data-scene='ERROR_RECOVER'] .stageIdle {
+  opacity: 1;
+}
+.stageRoot[data-scene='CREATE'] .stageCamera,
+.stageRoot[data-scene='TRANSFORM'] .stageCamera,
+.stageRoot[data-scene='MATERIALIZE'] .stageCamera,
+.stageRoot[data-scene='OWN'] .stageCamera {
+  opacity: 1;
+}
+
+/* ── 장면 레이어 ─────────────────────────────────────────────── */
+.stageScene {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  padding: 120px 96px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(28px);
+  transition:
+    opacity 0.6s var(--st-ease),
+    transform 0.6s var(--st-ease);
+}
+.stageScene.is-on {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+/* ── 타이포 ─────────────────────────────────────────────────── */
+.stageEyebrow {
+  color: var(--st-gold);
+  font-size: 30px;
+  font-weight: 500;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+}
+.stageHeadline {
+  color: var(--st-ivory);
+  font-size: 104px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+}
+.stageSub {
+  color: rgba(247, 243, 236, 0.72);
+  font-size: 40px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.55;
+}
+.stageNote {
+  color: rgba(247, 243, 236, 0.56);
+  font-size: 30px;
+  font-weight: 400;
+  line-height: 1.7;
+}
+
+/* ── ATTRACT ─────────────────────────────────────────────────── */
+.stageScene--attract {
+  align-content: end;
+  justify-items: center;
+  gap: 28px;
+  text-align: center;
+  cursor: pointer;
+  padding-bottom: 300px;
+}
+.stageScene--attract .stageHeadline {
+  font-size: 116px;
+}
+/* 숨 쉬는 골드 헤어라인 — 브랜드 문자 없이 "여기가 자리" 를 가리킨다. */
+.stageMark {
+  width: 220px;
+  height: 2px;
+  margin-bottom: 24px;
+  background: linear-gradient(90deg, transparent, var(--st-gold), transparent);
+  animation: stageBreath 4.2s var(--st-ease) infinite;
+}
+.stageFootmark {
+  width: 300px;
+  height: 300px;
+  margin-top: 60px;
+  border: 2px solid rgba(201, 162, 39, 0.55);
+  border-radius: 50%;
+  animation: stagePulse 4.2s var(--st-ease) infinite;
+}
+@keyframes stageBreath {
+  0%, 100% { opacity: 0.35; transform: scaleX(0.72); }
+  50% { opacity: 1; transform: scaleX(1); }
+}
+@keyframes stagePulse {
+  0%, 100% { opacity: 0.28; transform: scale(0.94); }
+  50% { opacity: 0.72; transform: scale(1); }
+}
+
+/* ── CONSENT ─────────────────────────────────────────────────── */
+.stageScene--consent {
+  align-content: center;
+  justify-items: center;
+}
+.stageCard {
+  display: grid;
+  justify-items: center;
+  gap: 26px;
+  width: 100%;
+  max-width: 840px;
+  padding: 88px 72px;
+  text-align: center;
+  background: rgba(24, 21, 18, 0.9);
+  border: 2px solid rgba(201, 162, 39, 0.5);
+  border-radius: 8px;
+  backdrop-filter: blur(6px);
+}
+.stageCard[hidden] {
+  display: none;
+}
+.stageCard .stageHeadline {
+  font-size: 76px;
+}
+.stageBullets {
+  display: grid;
+  gap: 18px;
+  justify-items: start;
+  width: 100%;
+  margin-top: 12px;
+  padding-top: 34px;
+  border-top: 1px solid rgba(247, 243, 236, 0.16);
+  text-align: left;
+}
+.stageBullet {
+  color: rgba(247, 243, 236, 0.78);
+  font-size: 30px;
+  line-height: 1.5;
+  padding-left: 34px;
+  position: relative;
+}
+.stageBullet::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 18px;
+  width: 14px;
+  height: 2px;
+  background: var(--st-cognac);
+}
+.stageBullet--strong {
+  color: var(--st-ivory);
+  font-weight: 700;
+}
+.stageActions {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  width: 100%;
+  margin-top: 24px;
+}
+.stageBtn {
+  min-height: 110px;
+  padding: 0 56px;
+  border: 2px solid var(--st-ivory);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--st-ivory);
+  font-family: inherit;
+  font-size: 34px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.3s var(--st-ease), color 0.3s var(--st-ease);
+}
+.stageBtn--primary {
+  background: var(--st-cognac);
+  border-color: var(--st-cognac);
+  color: var(--st-ivory);
+}
+.stageBtn:focus-visible {
+  outline: 3px solid var(--st-gold);
+  outline-offset: 6px;
+}
+.stageCountdown {
+  color: rgba(247, 243, 236, 0.48);
+  font-size: 26px;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── CREATE / TRANSFORM / MATERIALIZE ────────────────────────── */
+.stageScene--progress {
+  align-content: end;
+  justify-items: center;
+  gap: 20px;
+  text-align: center;
+  padding-bottom: 160px;
+}
+.stageScene--progress .stageHeadline {
+  font-size: 72px;
+  text-shadow: 0 4px 40px rgba(14, 12, 10, 0.9);
+}
+.stageScene--progress .stageSub {
+  font-size: 34px;
+  text-shadow: 0 2px 24px rgba(14, 12, 10, 0.9);
+}
+/* MATERIALIZE 에서는 하단 1/3 을 가방이 차지하므로 자막을 위로 올린다. */
+.stageRoot[data-scene='MATERIALIZE'] .stageScene--progress {
+  padding-bottom: 720px;
+}
+
+/* 씨앗 추출 순간 떠오르는 색 3개 (요구사항 3) */
+.stageSeed {
+  display: flex;
+  gap: 28px;
+  justify-content: center;
+  margin-bottom: 44px;
+}
+.stageSeedChip {
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  border: 2px solid rgba(247, 243, 236, 0.55);
+  opacity: 0;
+  transform: translateY(36px) scale(0.86);
+  transition:
+    opacity 0.7s var(--st-ease),
+    transform 0.7s var(--st-ease);
+}
+.stageSeed.is-on .stageSeedChip {
+  opacity: 1;
+  transform: none;
+}
+.stageSeed.is-on .stageSeedChip:nth-child(2) { transition-delay: 0.14s; }
+.stageSeed.is-on .stageSeedChip:nth-child(3) { transition-delay: 0.28s; }
+
+/* ── MATERIALIZE — 가방 프리뷰 (무대 하단 1/3 오버레이) ─────────
+   BagLayer 는 wrap.clientWidth 로 정사각 렌더러를 만든다. 하단 1/3(640px)에
+   들어맞도록 폭을 620px 로 묶어둔다 — BagLayer 와 싸우지 않는다. */
+.stageBagSlot {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 100%;
+  height: 640px;
+  transform: translateX(-50%);
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.7s var(--st-ease);
+}
+.stageRoot[data-scene='MATERIALIZE'] .stageBagSlot,
+.stageRoot[data-scene='OWN'] .stageBagSlot {
+  opacity: 1;
+}
+.is-stage .stageBagSlot > #bagWrap {
+  width: 620px;
+  height: 620px;
+  aspect-ratio: auto;
+  background: transparent;
+}
+.is-stage .stageBagSlot > #bagWrap canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+/* OWN 에서는 중앙 카드가 주인공 — 가방은 뒤로 물러난다. */
+.stageRoot[data-scene='OWN'] .stageBagSlot {
+  opacity: 0.55;
+}
+
+/* ── OWN — 이름 짓기 + QR 카드 ───────────────────────────────── */
+.stageScene--own {
+  align-content: center;
+  justify-items: center;
+}
+.stageForm {
+  display: grid;
+  gap: 28px;
+  justify-items: stretch;
+  width: 100%;
+  margin-top: 18px;
+}
+.stageInput {
+  width: 100%;
+  min-height: 118px;
+  padding: 0 32px;
+  border: 2px solid rgba(247, 243, 236, 0.4);
+  border-radius: 6px;
+  background: rgba(247, 243, 236, 0.06);
+  color: var(--st-ivory);
+  font-family: inherit;
+  font-size: 46px;
+  font-weight: 700;
+  text-align: center;
+}
+.stageInput::placeholder {
+  color: rgba(247, 243, 236, 0.34);
+  font-weight: 400;
+}
+.stageInput:focus-visible {
+  outline: 3px solid var(--st-gold);
+  outline-offset: 4px;
+}
+.stageForm .stageBtn {
+  width: 100%;
+}
+
+/* 결과 카드(#resultCard) 재사용 — 무대 톤으로만 다시 칠한다. */
+.is-stage .stageScene--own .resultCard {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 34px;
+  width: 100%;
+  max-width: 840px;
+  margin: 0;
+  padding: 72px 64px;
+  background: rgba(24, 21, 18, 0.94);
+  border: 2px solid rgba(201, 162, 39, 0.5);
+  border-radius: 8px;
+  color: var(--st-ivory);
+  text-align: center;
+  backdrop-filter: blur(6px);
+}
+.is-stage .stageScene--own .resultCardQr {
+  padding: 28px;
+  background: var(--st-ivory);
+  border: none;
+  border-radius: 8px;
+}
+/* 비디오월은 멀리서 본다 — 스캔 가능 최소치(200px)의 두 배로 키운다. */
+.is-stage .stageScene--own #resultQrCanvas {
+  width: 420px;
+  height: 420px;
+  /* 256px 백킹스토어를 420px 로 키운다 — 보간하면 모듈 경계가 흐려져 스캔이 떨어진다. */
+  image-rendering: pixelated;
+}
+.is-stage .stageScene--own .resultCardCopy {
+  justify-items: center;
+  gap: 16px;
+  text-align: center;
+}
+.is-stage .stageScene--own .resultCardEyebrow {
+  color: var(--st-gold);
+  font-size: 28px;
+  letter-spacing: 0.32em;
+}
+.is-stage .stageScene--own .resultCardHeadline {
+  color: var(--st-ivory);
+  font-size: 62px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+.is-stage .stageScene--own .resultCardValue {
+  color: rgba(247, 243, 236, 0.86);
+  font-size: 30px;
+}
+.is-stage .stageScene--own .resultCardNote {
+  color: rgba(247, 243, 236, 0.56);
+  font-size: 26px;
+}
+
+/* ── RESET / ERROR_RECOVER ───────────────────────────────────── */
+.stageScene--notice {
+  align-content: center;
+  justify-items: center;
+}
+.stageScene--notice .stageCard {
+  border-color: rgba(247, 243, 236, 0.24);
+}
+.stageRoot[data-scene='ERROR_RECOVER'] .stageScene--notice .stageCard {
+  border-color: rgba(180, 36, 49, 0.6);
+}
+
+/* 접근성 — 모션 민감 관객을 위한 정지 (패턴 루프는 JS 에서 함께 멈춘다). */
+@media (prefers-reduced-motion: reduce) {
+  .stageMark,
+  .stageFootmark {
+    animation: none;
+  }
+}
