@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>리빙 비세토스 — 운영 대시보드</title>
+<link rel="icon" href="data:,">
+<link rel="preload" href="/assets/fonts/PretendardVariable.woff2" as="font" type="font/woff2" crossorigin>
+</head>
+<body>
+<main class="adminShell" aria-labelledby="adminTitle">
+  <header class="adminHero">
+    <div>
+      <p class="eyebrow">D · F-09</p>
+      <h1 id="adminTitle">운영 결과 대시보드</h1>
+      <p class="heroCopy">업로드가 완료된 Supabase 결과만 확인하는 화이트/차콜 운영 화면입니다.</p>
+    </div>
+    <a class="kioskLink" href="/">키오스크로 돌아가기</a>
+  </header>
+
+  <section class="filterPanel" aria-label="결과 조회 필터">
+    <label class="tokenField" for="adminToken">
+      <span>운영 토큰</span>
+      <input id="adminToken" type="password" autocomplete="off" placeholder="RESULT_ADMIN_TOKEN">
+    </label>
+    <label class="searchField" for="codeSearch">
+      <span>세션 코드 조회</span>
+      <input id="codeSearch" type="search" autocomplete="off" placeholder="ABCD-1234" spellcheck="false">
+    </label>
+    <div class="filterActions">
+      <button class="filterPill" id="searchButton" type="button">상세 조회</button>
+      <button class="outlineControl" id="refreshButton" type="button">목록 새로고침</button>
+    </div>
+  </section>
+
+  <section class="statusBand" id="statusBand" aria-live="polite">최근 결과를 불러오는 중입니다.</section>
+
+  <div class="dashboardGrid">
+    <section class="resultsPanel" aria-labelledby="listTitle">
+      <div class="panelHeader">
+        <div>
+          <p class="eyebrow">Uploaded Supabase records</p>
+          <h2 id="listTitle">최근 결과</h2>
+        </div>
+        <div class="pagerControls" aria-label="페이지 이동">
+          <button class="outlineControl" id="prevButton" type="button">이전</button>
+          <button class="outlineControl" id="nextButton" type="button">다음</button>
+        </div>
+      </div>
+      <div class="resultList" id="resultList"></div>
+    </section>
+
+    <section class="detailPanel" aria-labelledby="detailTitle">
+      <div class="panelHeader">
+        <div>
+          <p class="eyebrow">Result detail</p>
+          <h2 id="detailTitle">선택 결과</h2>
+        </div>
+      </div>
+      <div class="detailContent" id="detailContent">
+        <p class="emptyState">왼쪽 목록에서 결과를 선택하거나 세션 코드를 입력하세요.</p>
+      </div>
+    </section>
+  </div>
+</main>
+<script type="module" src="/src/admin/main.ts"></script>
+</body>
+</html>
