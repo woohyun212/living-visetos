@@ -172,7 +172,7 @@ async function insertOrderRecord(record: Omit<OrderRecord, 'id'>): Promise<Order
   const response = await fetch(`${url}/rest/v1/orders`, {
     method: 'POST',
     headers: {
-      authorization: `Bearer ${serviceKey}`,
+      ...supabaseAuthHeaders(serviceKey),
       apikey: serviceKey,
       'content-type': 'application/json',
       prefer: 'return=representation',
@@ -181,7 +181,7 @@ async function insertOrderRecord(record: Omit<OrderRecord, 'id'>): Promise<Order
   });
 
   if (!response.ok) {
-    throw new HttpError('Order record insert failed.', 502);
+    throw new HttpError(await upstreamErrorMessage(response, 'Order record insert failed.'), 502);
   }
 
   const body: unknown = await response.json();
@@ -206,14 +206,14 @@ async function selectOrderRecords(options: { code: string | null; limit: number 
 
   const response = await fetch(`${url}/rest/v1/orders?${searchParams}`, {
     headers: {
-      authorization: `Bearer ${serviceKey}`,
+      ...supabaseAuthHeaders(serviceKey),
       apikey: serviceKey,
       accept: 'application/json',
     },
   });
 
   if (!response.ok) {
-    throw new HttpError('Order record lookup failed.', 502);
+    throw new HttpError(await upstreamErrorMessage(response, 'Order record lookup failed.'), 502);
   }
 
   const body: unknown = await response.json();
@@ -261,6 +261,20 @@ function isValidContact(value: string): boolean {
 
 function json(body: unknown, status: number, headers: Record<string, string> = {}): Response {
   return Response.json(body, { status, headers });
+}
+
+function supabaseAuthHeaders(serviceKey: string): Record<string, string> {
+  return serviceKey.startsWith('sb_secret_')
+    ? { authorization: serviceKey }
+    : { authorization: `Bearer ${serviceKey}` };
+}
+
+async function upstreamErrorMessage(response: Response, fallback: string): Promise<string> {
+  const body = await response.text().catch(() => '');
+  const compactBody = body.replace(/\s+/g, ' ').trim().slice(0, 500);
+  return compactBody
+    ? `${fallback} Supabase ${response.status}: ${compactBody}`
+    : `${fallback} Supabase ${response.status}.`;
 }
 
 class HttpError extends Error {
@@ -320,7 +334,24 @@ function requireSupabaseConfig(): { serviceKey: string; url: string } {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('Order storage is not configured.');
   }
-  return { serviceKey: SUPABASE_SERVICE_ROLE_KEY, url: SUPABASE_URL.replace(/\/$/, '') };
+
+  const url = normalizeSupabaseUrl(SUPABASE_URL, 'Order');
+  return { serviceKey: SUPABASE_SERVICE_ROLE_KEY, url };
+}
+
+function normalizeSupabaseUrl(value: string, scope: string): string {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error(`${scope} storage SUPABASE_URL must be a valid project URL.`);
+  }
+
+  if (url.hostname === 'supabase.com' || url.pathname.includes('/dashboard')) {
+    throw new Error(`${scope} storage SUPABASE_URL must be the Project URL like https://PROJECT_REF.supabase.co, not the dashboard URL.`);
+  }
+
+  return url.origin;
 }
 
 function normalizeResultCode(value: string): string {
