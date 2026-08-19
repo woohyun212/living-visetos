@@ -8,6 +8,7 @@
 ```bash
 npm install
 npm run dev          # http://localhost:5173 → 카메라 허용 → 버튼 0→1→2→3→4
+npm run dev          # http://localhost:5173/admin.html → F-09 운영 대시보드
 ```
 
 | 명령 | 하는 일 |
@@ -30,7 +31,7 @@ npm run dev          # http://localhost:5173 → 카메라 허용 → 버튼 0�
 | --- | --- |
 | [`docs/DEV_SETUP.md`](docs/DEV_SETUP.md) | 누가·규칙 (모듈 분담, 브랜치, 통합의 날) |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 어떻게 (컴포넌트, 상태머신, ADR, 폴백 매트릭스) |
-| [`docs/DESIGN.md`](docs/DESIGN.md) | 어떻게 보이는가 (팔레트, 타이포, 컴포넌트) |
+| [`DESIGN.md`](DESIGN.md) | 어떻게 보이는가 (팔레트, 타이포, 컴포넌트) |
 | [`docs/skeleton_v0.html`](docs/skeleton_v0.html) | 이 리포가 태어난 v0 걷는 스켈레톤 (히스토리 · 단일 파일로 실행 가능) |
 
 ## 구조와 담당
@@ -48,6 +49,19 @@ public/models/    A: 세그멘테이션 모델 로컬 번들 (예정)
 public/assets/    C: 가방 GLTF, 폰트, 사운드
 cloud/            D: Vercel Functions + 결과 페이지 (예정)
 ```
+
+## F-09 운영 대시보드 MVP
+
+`/admin.html`은 키오스크 `index.html`과 분리된 Vite 멀티 페이지 진입점이다. 런타임은
+`src/admin/` 아래 정적 DOM + TypeScript만 사용하며 `src/main.ts`, 카메라, 세그멘터,
+오버레이, 가방 프리뷰 클래스를 import하지 않는다.
+
+- 목록: `GET /api/results?limit=20&offset=0`으로 Supabase `results` 테이블의 업로드 완료 기록을 최신순으로 조회한다.
+- 상세: `GET /api/results?code=ABCD-1234`로 코드 단건을 조회하고 서버에서 Supabase Storage signed URL을 발급한다.
+- 환경: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_RESULTS_BUCKET`, `RESULT_ADMIN_TOKEN`, `RESULT_ASSET_URL_TTL_SECONDS`가 필요하다. F-05 POST URL 응답에는 기존처럼 `RESULT_PUBLIC_BASE_URL`도 필요하다.
+- 보안: F-09 GET은 `Authorization: Bearer <RESULT_ADMIN_TOKEN>`이 있어야 목록과 signed URL 상세를 반환한다. 키오스크 F-05 POST는 기존 업로드 흐름을 깨지 않도록 같은 토큰을 요구하지 않는다.
+- 업로드 방어: F-05 POST는 서버에서 video/poster MIME과 용량을 제한하고, 함수 인스턴스 단위의 기본 rate limit을 둔다. 운영 배포에서는 Vercel/WAF 같은 플랫폼 rate limit도 같이 거는 것을 전제로 한다.
+- 한계: F-09는 Supabase에 업로드된 기록만 보여준다. 오프라인 IndexedDB 재시도 큐는 이 PR에서 drain하지 않는다. Signed URL은 버킷/오브젝트 권한이 맞아야 열리며, 현재 F-05 녹화본은 전체 최종 가방 합성이 아니라 `overlayCanvas` 기준이다.
 
 **계약이 국경이다.** 모듈은 `src/contracts.ts`의 타입으로만 대화한다. 구현은 자유.
 계약 v1의 출처는 `docs/ARCHITECTURE.md` §5 (DEV_SETUP §3의 초안을 대체).
