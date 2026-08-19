@@ -123,8 +123,12 @@ function readErrorMessage(body: unknown): string | null {
     return null;
   }
 
-  const error = (body as { error: unknown }).error;
-  return typeof error === 'string' ? error : null;
+  const { error, detail } = body as { error: unknown; detail?: unknown };
+  if (typeof error !== 'string') {
+    return null;
+  }
+
+  return typeof detail === 'string' && detail.length > 0 ? `${error} ${detail}` : error;
 }
 
 async function loadList(nextOffset = offset): Promise<void> {
