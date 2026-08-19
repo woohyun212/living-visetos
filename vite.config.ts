@@ -1,4 +1,4 @@
-import type { ViteDevServer } from 'vite';
+import type { PreviewServer, ViteDevServer } from 'vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
@@ -18,44 +18,52 @@ function localResultsApiPlugin() {
   return {
     name: 'living-visetos-local-results-api',
     configureServer(server: ViteDevServer) {
-      server.middlewares.use('/api/results', async (request, response) => {
-        try {
-          const api = await import('./api/results.ts');
-          await sendWebResponse(response, await api.default.fetch(
-            toWebRequest(request as unknown as LocalApiRequest, '/api/results'),
-          ));
-        } catch {
-          response.statusCode = 500;
-          response.setHeader('content-type', 'application/json');
-          response.end(JSON.stringify({ error: 'Local results API failed.' }));
-        }
-      });
-
-      server.middlewares.use('/api/orders', async (request, response) => {
-        try {
-          const api = await import('./api/orders.ts');
-          await sendWebResponse(response, await api.default.fetch(
-            toWebRequest(request as unknown as LocalApiRequest, '/api/orders'),
-          ));
-        } catch {
-          response.statusCode = 500;
-          response.setHeader('content-type', 'application/json');
-          response.end(JSON.stringify({ error: 'Local orders API failed.' }));
-        }
-      });
-
-      server.middlewares.use('/results', async (request, _response, next) => {
-        const localRequest = request as unknown as { url?: string };
-        if (localRequest.url === '/' || localRequest.url?.startsWith('/?')) {
-          next();
-          return;
-        }
-
-        localRequest.url = '/result.html';
-        next();
-      });
+      installLocalResultMiddlewares(server);
+    },
+    configurePreviewServer(server: PreviewServer) {
+      installLocalResultMiddlewares(server);
     },
   };
+}
+
+type LocalMiddlewareServer = Pick<ViteDevServer | PreviewServer, 'middlewares'>;
+
+function installLocalResultMiddlewares(server: LocalMiddlewareServer): void {
+  server.middlewares.use('/api/results', async (request, response) => {
+    try {
+      const api = await import('./api/results.ts');
+      await sendWebResponse(response, await api.default.fetch(
+        toWebRequest(request as unknown as LocalApiRequest, '/api/results'),
+      ));
+    } catch {
+      response.statusCode = 500;
+      response.setHeader('content-type', 'application/json');
+      response.end(JSON.stringify({ error: 'Local results API failed.' }));
+    }
+  });
+
+  server.middlewares.use('/api/orders', async (request, response) => {
+    try {
+      const api = await import('./api/orders.ts');
+      await sendWebResponse(response, await api.default.fetch(
+        toWebRequest(request as unknown as LocalApiRequest, '/api/orders'),
+      ));
+    } catch {
+      response.statusCode = 500;
+      response.setHeader('content-type', 'application/json');
+      response.end(JSON.stringify({ error: 'Local orders API failed.' }));
+    }
+  });
+
+  server.middlewares.use((request, _response, next) => {
+    const localRequest = request as unknown as { url?: string };
+    const url = new URL(localRequest.url ?? '/', 'http://localhost');
+    if (url.pathname === '/results' || url.pathname.startsWith('/results/')) {
+      localRequest.url = `/result.html${url.search}`;
+    }
+
+    next();
+  });
 }
 
 type LocalApiRequest = {
