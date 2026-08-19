@@ -137,7 +137,7 @@ async function handleGet(request: Request): Promise<Response> {
     }
 
     try {
-      return handlePublicDetail(code);
+      return await handlePublicDetail(code);
     } catch (error) {
       return errorResponse(error, 'Result lookup failed.', 400, noStoreHeaders());
     }
@@ -154,10 +154,10 @@ async function handleGet(request: Request): Promise<Response> {
 
   try {
     if (code !== null) {
-      return handleDetail(code);
+      return await handleDetail(code);
     }
 
-    return handleList(url.searchParams);
+    return await handleList(url.searchParams);
   } catch (error) {
     return errorResponse(error, 'Result lookup failed.', 400, noStoreHeaders());
   }
