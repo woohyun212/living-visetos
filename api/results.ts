@@ -433,7 +433,7 @@ async function insertResultRecord(record: ResultRecord): Promise<void> {
 
 function supabaseAuthHeaders(serviceKey: string): Record<string, string> {
   return serviceKey.startsWith('sb_secret_')
-    ? { authorization: serviceKey }
+    ? {}
     : { authorization: `Bearer ${serviceKey}` };
 }
 

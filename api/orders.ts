@@ -265,7 +265,7 @@ function json(body: unknown, status: number, headers: Record<string, string> = {
 
 function supabaseAuthHeaders(serviceKey: string): Record<string, string> {
   return serviceKey.startsWith('sb_secret_')
-    ? { authorization: serviceKey }
+    ? {}
     : { authorization: `Bearer ${serviceKey}` };
 }
 
