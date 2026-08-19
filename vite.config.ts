@@ -10,6 +10,7 @@ export default defineConfig({
         admin: 'admin.html',
         result: 'result.html',
         drop: 'drop.html',
+        membership: 'membership.html',
       },
     },
   },
