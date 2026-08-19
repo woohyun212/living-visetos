@@ -12,6 +12,26 @@
  */
 import type { KioskState } from '../contracts.ts';
 
+/**
+ * KioskFlow 가 화면에게 요구하는 전부. 개발자 계기판(KioskView)과 관객 무대(StageView)가
+ * 이 인터페이스를 나눠 구현한다 — 여정 배선(kiosk.ts)은 어느 쪽인지 알 필요가 없다.
+ */
+export interface KioskScreen {
+  onAttractTouch(fn: (value: void) => void): void;
+  onConsent(fn: (agreed: boolean) => void): void;
+  onNameSubmit(fn: (name: string) => void): void;
+  renderBadge(state: KioskState, remainingMs: number | null): void;
+  showAttract(): void;
+  showConsent(totalMs: number, remaining: () => number | null): void;
+  showProgress(state: KioskState, headline: string, note: string): void;
+  showNaming(defaultName: string): void;
+  showDelivering(patternName: string, seconds: number): void;
+  showResult(): void;
+  showFarewell(): void;
+  showError(message: string): void;
+  dispose(): void;
+}
+
 export interface KioskViewOptions {
   /** false 면(?debug=1) 풀스크린 연출을 그리지 않는다. 이름 입력창과 상태 뱃지는 남는다. */
   chrome: boolean;
@@ -21,7 +41,7 @@ type Handler<T> = (value: T) => void;
 
 const noop = (): void => {};
 
-export class KioskView {
+export class KioskView implements KioskScreen {
   private readonly root: HTMLDivElement;
   private readonly badge: HTMLDivElement;
   private readonly chrome: boolean;
