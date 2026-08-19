@@ -6,6 +6,7 @@
  *    EventBus 로 모듈 간 호출을 대체 (ARCHITECTURE §11-5).
  */
 import type { DeliveryTicket, FeatureSeed, PatternTile } from './contracts.ts';
+import { drawQrCode, toScannableUrl, toShortUrlLabel } from './output/qr.ts';
 import { CLIP_SECONDS, deliver, record } from './output/recorder.ts';
 import { generateTile } from './pattern/l1.ts';
 import { acceptPromotedTile, promoteToL2 } from './pattern/l2.ts';
@@ -67,8 +68,61 @@ PatternTile: ${tileContract}
 DeliveryTicket: ${deliveryContract}`;
 };
 
+/* 결과 전달 카드 (D · F-05) — url 이면 QR, code 면 오프라인 폴백 문구 (ARCHITECTURE §9). */
+const resultCard = $('resultCard');
+
+function hideResultCard(): void {
+  resultCard.hidden = true;
+  resultCard.classList.remove('resultCard--code');
+}
+
+async function showResultCard(ticket: DeliveryTicket): Promise<void> {
+  const setCopy = (eyebrow: string, headline: string, value: string, note: string) => {
+    $('resultCardEyebrow').textContent = eyebrow;
+    $('resultCardHeadline').textContent = headline;
+    $('resultCardValue').textContent = value;
+    $('resultCardNote').textContent = note;
+  };
+
+  if (ticket.kind === 'code') {
+    resultCard.classList.add('resultCard--code');
+    setCopy(
+      '오프라인 전달 코드',
+      '나중에 이 코드로 받아가세요',
+      ticket.code,
+      '네트워크가 없어 결과를 키오스크에 저장했습니다. 운영자에게 이 코드를 알려주세요.',
+    );
+    resultCard.hidden = false;
+    return;
+  }
+
+  resultCard.classList.remove('resultCard--code');
+  setCopy(
+    '결과 링크',
+    '폰으로 스캔하세요',
+    toShortUrlLabel(ticket.url),
+    '폰 카메라를 QR에 비추면 결과 페이지가 열립니다.',
+  );
+  resultCard.hidden = false;
+
+  try {
+    await drawQrCode($<HTMLCanvasElement>('resultQrCanvas'), toScannableUrl(ticket.url));
+  } catch {
+    // QR 을 못 그려도 링크 글자는 남는다 — 관객이 주소를 직접 칠 수 있다.
+    $('resultCardNote').textContent = 'QR을 그리지 못했습니다. 위 주소를 폰 브라우저에 직접 입력하세요.';
+  }
+}
+
+/** 새 세션 시작 지점 — 앞 관객의 결과 카드가 다음 사람 화면에 남지 않게 지운다. */
+function clearDeliveryResult(): void {
+  session.deliveryTicket = null;
+  hideResultCard();
+  renderContract();
+}
+
 /* 0. 카메라 (공통 인프라) */
 $<HTMLButtonElement>('btnStart').onclick = async () => {
+  clearDeliveryResult();
   try {
     await capture.start();
     void segmenter.init(); // wasm+모델 프리로드 — 씨앗 추출·오버레이가 기다리지 않게
@@ -84,6 +138,7 @@ $<HTMLButtonElement>('btnStart').onclick = async () => {
 
 /* 1. 모듈 A — FeatureSeed */
 async function runSeed(): Promise<void> {
+  clearDeliveryResult();
   session.seed = await extractSeed(video, { sessionId: session.id, segmenter });
   session.seed.dominantColors.forEach((col, i) => {
     ($('seedColors').children[i] as HTMLElement).style.background = col;
@@ -180,9 +235,11 @@ async function runDeliver(): Promise<void> {
     session.deliveryTicket = ticket;
     renderContract();
 
+    await showResultCard(ticket);
+
     if (ticket.kind === 'url') {
       setDelivery('전송 완료 — 결과 페이지가 준비되었습니다.', ticket.url, '결과 링크');
-      setStatus('결과 URL이 생성되었습니다.');
+      setStatus('결과 URL이 생성되었습니다. 관객에게 QR을 스캔하도록 안내하세요.');
     } else {
       setDelivery('오프라인 저장 완료 — 아래 오프라인 전달 코드를 안내하세요.', ticket.code, '오프라인 전달 코드');
       setStatus('오프라인 코드가 발급되었습니다. 운영자에게 이 코드를 알려주세요.');
@@ -207,3 +264,13 @@ $<HTMLButtonElement>('btnAll').onclick = async () => {
 };
 
 renderContract();
+
+/* 개발 전용 — ?mockTicket=url|code 로 카메라 없이 결과 카드를 확인한다. 프로덕션 번들에서는 제거된다. */
+if (import.meta.env.DEV) {
+  const mockTicket = new URLSearchParams(location.search).get('mockTicket');
+  if (mockTicket === 'url') {
+    void showResultCard({ kind: 'url', url: `${location.origin}/results/ABCD-EFGH` });
+  } else if (mockTicket === 'code') {
+    void showResultCard({ kind: 'code', code: 'ABCD-EFGH' });
+  }
+}

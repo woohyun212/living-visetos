@@ -44,12 +44,26 @@ src/
 ├─ vision/        A 비전·캡처     capture.ts / segmenter.ts / seed.ts
 ├─ pattern/       B 패턴 엔진     l1.ts (프로시저럴) / l2.ts (생성AI 승격 스텁)
 ├─ render/        C 렌더·연출     overlay.ts (실루엣) / bag.ts (3D 가방)
-├─ output/        D 결과물·웹     recorder.ts (스텁)
+├─ output/        D 결과물·웹     recorder.ts (녹화·업로드) / qr.ts (QR·짧은 링크)
 └─ mocks/         모듈별 목 데이터 — 옆 모듈이 늦어도 내 개발은 멈추지 않는다
 public/models/    A: 세그멘테이션 모델 로컬 번들 (예정)
 public/assets/    C: 가방 GLTF, 폰트, 사운드
 cloud/            D: Vercel Functions + 결과 페이지 (예정)
 ```
+
+## F-05 결과 전달 카드 (QR / 오프라인 코드)
+
+`deliver()`가 `DeliveryTicket`을 돌려주면 키오스크는 버튼 줄 아래 결과 카드를 띄운다.
+
+- `kind:'url'` → 256px 캔버스 QR + 짧은 링크 + "폰으로 스캔하세요". QR에 넣는 값은 항상
+  `new URL(ticket.url, location.origin).href`로 절대화한다. 상대 경로를 그대로 넣으면 폰에서 열리지 않는다.
+- `kind:'code'` → QR 없이 세션 코드를 크게 + "나중에 이 코드로 받아가세요" (ARCHITECTURE §9 오프라인 폴백).
+- 카드는 `0. 카메라 시작` 또는 `1. 씨앗 추출`을 누르면 사라진다(티켓도 같이 버린다). 앞 관객의 결과가 다음 사람 화면에 남지 않는다.
+- QR 라이브러리는 `qrcode`(MIT)를 dependencies로 **로컬 번들**한다. CDN을 타지 않는다 (ADR-003과 같은 오프라인 원칙).
+- 개발 확인: `npm run dev` 후 `?mockTicket=url` 또는 `?mockTicket=code`로 카메라 없이 카드를 렌더한다.
+  이 주입은 `import.meta.env.DEV` 가드 안에 있어 프로덕션 번들에는 포함되지 않는다.
+- 실기기 스캔은 QR이 가리키는 호스트에 폰이 닿을 수 있어야 한다. `localhost`는 폰에서 열리지 않으므로
+  LAN 호스트(`vite --host`)나 배포 URL(`RESULT_PUBLIC_BASE_URL`)에서 확인한다.
 
 ## F-06 공개 결과와 목업 주문 + F-09 운영 대시보드
 

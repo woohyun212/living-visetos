@@ -39,6 +39,18 @@
   </div>
 </div>
 
+<section id="resultCard" class="resultCard" hidden aria-live="polite" aria-label="결과 전달 카드">
+  <div class="resultCardQr">
+    <canvas id="resultQrCanvas" width="256" height="256" role="img" aria-label="결과 페이지 QR 코드"></canvas>
+  </div>
+  <div class="resultCardCopy">
+    <p class="resultCardEyebrow" id="resultCardEyebrow">결과 링크</p>
+    <p class="resultCardHeadline" id="resultCardHeadline">폰으로 스캔하세요</p>
+    <p class="resultCardValue" id="resultCardValue"></p>
+    <p class="resultCardNote" id="resultCardNote">카메라를 QR에 비추면 결과 페이지가 열립니다.</p>
+  </div>
+</section>
+
 <div class="grid">
   <div class="panel">
     <h2><b>모듈 A → C</b> · 카메라 &amp; 실루엣 오버레이 (F-01 / F-03)</h2>

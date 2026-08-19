@@ -83,3 +83,37 @@ button:hover:not(:disabled){background:var(--red);border-color:var(--red);color:
 .panel--seed h2 b{color:var(--ds-ink);font-weight:700;}
 .panel--seed .seedColors i{border-radius:var(--ds-radius-sm);border:1px solid var(--ds-hairline);}
 .panel--seed .kv{color:var(--ds-muted);font-size:13px;font-weight:400;}
+
+/* 결과 전달 카드 (D · F-05) — DESIGN.md 토큰. kind:'url' 은 QR, kind:'code' 는 큰 코드. */
+.resultCard{
+  display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:var(--ds-space-xl);
+  max-width:var(--ds-measure-page);margin:0 0 14px;padding:var(--ds-space-xl);
+  background:var(--ds-canvas);border:var(--ds-border-active) solid var(--ds-ink);border-radius:var(--ds-radius-sm);
+  color:var(--ds-ink);font-family:"Pretendard Variable","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  box-shadow:var(--ds-shadow-none);
+}
+.resultCard[hidden]{display:none;}
+.resultCardQr{
+  display:grid;place-items:center;padding:var(--ds-space-lg);
+  background:var(--ds-canvas);border:var(--ds-border-hairline) solid var(--ds-hairline);border-radius:var(--ds-radius-sm);
+}
+/* 256px 고정 — 어떤 뷰포트에서도 스캔 가능 최소 크기(200px) 아래로 내려가지 않는다. */
+#resultQrCanvas{display:block;width:256px;height:256px;}
+.resultCardCopy{display:grid;align-content:center;gap:var(--ds-space-sm);min-width:0;}
+.resultCardEyebrow{
+  color:var(--ds-muted);font-size:var(--ds-font-utility);font-weight:var(--ds-weight-regular);
+  letter-spacing:.08em;text-transform:uppercase;
+}
+.resultCardHeadline{
+  color:var(--ds-ink);font-size:var(--ds-font-search);font-weight:var(--ds-weight-bold);line-height:var(--ds-line-tight);
+}
+.resultCardValue{
+  color:var(--ds-ink);font-family:ui-monospace,Menlo,monospace;font-size:var(--ds-font-body);
+  font-weight:var(--ds-weight-bold);letter-spacing:.02em;line-height:1.5;overflow-wrap:anywhere;
+}
+.resultCardNote{color:var(--ds-muted);font-size:var(--ds-font-utility);font-weight:var(--ds-weight-regular);line-height:1.5;}
+/* 오프라인 폴백(ARCHITECTURE §9): 스캔할 대상이 없으니 QR 대신 코드를 크게 세운다. */
+.resultCard--code{grid-template-columns:minmax(0,1fr);}
+.resultCard--code .resultCardQr{display:none;}
+.resultCard--code .resultCardValue{font-size:var(--ds-font-ticket);letter-spacing:.04em;line-height:var(--ds-line-tight);}
+@media(max-width:900px){.resultCard{grid-template-columns:minmax(0,1fr);justify-items:start;}}
