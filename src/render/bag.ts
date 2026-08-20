@@ -63,8 +63,14 @@ loader.load(
 },
   undefined,
   (error) => {
-    console.error('가방 GLB 로드 실패:', error);
-  },
+  console.error('가방 GLB 로드 실패:', error);
+
+  this.addFallbackBag();
+
+  if (this.pendingTile) {
+    this.applyTile(this.pendingTile);
+  }
+},
 );
 
     this.loop();
@@ -113,6 +119,39 @@ this.bagMeshes.forEach((mesh) => {
     this.texture?.dispose();
     this.renderer.dispose();
   }
+
+  private addFallbackBag(): void {
+  const bodyMaterial = new THREE.MeshStandardMaterial({
+    color: 0xa9652c,
+    roughness: 0.55,
+    metalness: 0.08,
+  });
+
+  const darkMaterial = new THREE.MeshStandardMaterial({
+    color: 0x2a1c10,
+    roughness: 0.5,
+  });
+
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(1.7, 1.25, 0.62),
+    bodyMaterial,
+  );
+
+  const flap = new THREE.Mesh(
+    new THREE.BoxGeometry(1.7, 0.5, 0.66),
+    bodyMaterial,
+  );
+  flap.position.set(0, 0.42, 0.01);
+
+  const handle = new THREE.Mesh(
+    new THREE.TorusGeometry(0.42, 0.05, 12, 40, Math.PI),
+    darkMaterial,
+  );
+  handle.position.y = 0.66;
+
+  this.bag.add(body, flap, handle);
+  this.bagMeshes.push(body, flap);
+}
 
   private loop = (): void => {
     this.bag.rotation.y += 0.012;
