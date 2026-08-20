@@ -6,6 +6,11 @@
   font-display:swap;
 }
 
+/**
+ * E · F-08 멤버십 패턴 시그니처 — "재방문마다 패턴이 진화한다"를 스크롤 내러티브로 읽히게 한 컨셉 화면.
+ * 색·타이포·간격은 DESIGN.md(KREAM) 토큰 기반이며, 내러티브에 필요한 디스플레이 단계만 파생 스케일로 얹었다.
+ * .siteBar / .siteFooter / 버튼 블록은 drop.html 과 같은 값으로 복제되어 있다(공유 모듈 없음).
+ */
 :root{
   --membership-canvas:#ffffff;
   --membership-black:#000000;
@@ -14,6 +19,7 @@
   --membership-surface:#f5f5f5;
   --membership-pill:#f4f4f4;
   --membership-hairline:#f0f0f0;
+  --membership-rule:#e4e4e4;
   --membership-on-ink:#ffffff;
   --membership-radius-none:0px;
   --membership-radius-sm:6px;
@@ -28,18 +34,33 @@
   --membership-space-lg:12px;
   --membership-space-xl:24px;
   --membership-space-2xl:48px;
-  --membership-measure-page:1188px;
+  --membership-space-3xl:96px;
+  --membership-measure-page:1240px;
+  --membership-measure-bar:64px;
+  --membership-measure-rail:64px;
+  --membership-measure-stage:380px;
   --membership-measure-signature:380px;
   --membership-measure-header:72px;
   --membership-measure-control:30px;
+  --membership-measure-field:48px;
+  --membership-measure-gutter:32px;
   --membership-font-body:16px;
   --membership-font-utility:13px;
+  --membership-font-lead:17px;
   --membership-font-search:24px;
+  --membership-font-display:clamp(38px,6vw,74px);
+  --membership-font-section:clamp(26px,3.1vw,40px);
+  --membership-font-index:clamp(28px,3.4vw,42px);
+  --membership-weight-display:840;
+  --membership-track-display:-.045em;
   --membership-opacity-disabled:.35;
   --membership-shadow-none:none;
+  --membership-ease:cubic-bezier(.2,.7,.3,1);
 }
 
 *{box-sizing:border-box;margin:0;padding:0;}
+
+html{scroll-behavior:smooth;scroll-padding-top:calc(var(--membership-measure-bar) + var(--membership-space-xl));}
 
 body{
   min-width:320px;
@@ -47,105 +68,279 @@ body{
   color:var(--membership-ink);
   font-family:"Pretendard Variable","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
   font-size:var(--membership-font-body);
+  -webkit-font-smoothing:antialiased;
 }
 
-.membershipShell{
-  width:min(var(--membership-measure-page),calc(100vw - var(--membership-space-2xl)));
-  margin:0 auto;
-  padding:var(--membership-space-xl) 0 var(--membership-space-2xl);
+button,input,select{font:inherit;color:inherit;}
+button{cursor:pointer;}
+canvas{display:block;}
+
+:focus-visible{outline:var(--membership-border-active) solid var(--membership-ink);outline-offset:3px;}
+
+.skipLink{
+  position:absolute;
+  left:var(--membership-space-lg);
+  top:calc(var(--membership-space-lg) * -6);
+  z-index:20;
+  padding:var(--membership-space-md) var(--membership-space-lg);
+  border-radius:var(--membership-radius-sm);
+  background:var(--membership-ink);
+  color:var(--membership-on-ink);
+  font-size:var(--membership-font-utility);
+  text-decoration:none;
 }
 
-.membershipHero{
+.skipLink:focus{top:var(--membership-space-lg);}
+
+/* ── 사이트 헤더 (드랍·멤버십 공통 스타일) ───────────────────── */
+
+.siteBar{
+  position:sticky;
+  top:0;
+  z-index:10;
+  border-bottom:var(--membership-border-hairline) solid var(--membership-rule);
+  background:color-mix(in srgb,var(--membership-canvas) 92%,transparent);
+  backdrop-filter:blur(12px);
+}
+
+.siteBarInner{
   display:flex;
-  align-items:flex-start;
+  align-items:center;
   justify-content:space-between;
   gap:var(--membership-space-xl);
-  padding:var(--membership-space-xl) 0;
-  border-bottom:var(--membership-border-hairline) solid var(--membership-hairline);
+  width:min(var(--membership-measure-page),100% - var(--membership-measure-gutter));
+  height:var(--membership-measure-bar);
+  margin:0 auto;
 }
 
-.eyebrow{
+.siteMark{
+  display:grid;
+  gap:1px;
+  color:var(--membership-ink);
+  text-decoration:none;
+}
+
+.siteMark b{
+  font-size:var(--membership-font-utility);
+  font-weight:800;
+  letter-spacing:.18em;
+}
+
+.siteMark span{
+  color:var(--membership-muted);
+  font-size:11px;
+  letter-spacing:.1em;
+}
+
+.siteNav{display:flex;align-items:center;gap:var(--membership-space-xl);height:100%;}
+
+.siteNavLink{
+  display:inline-flex;
+  align-items:center;
+  height:100%;
+  border-bottom:var(--membership-border-active) solid transparent;
   color:var(--membership-muted);
   font-size:var(--membership-font-utility);
   font-weight:400;
-  letter-spacing:.08em;
+  text-decoration:none;
+  transition:color .18s var(--membership-ease);
+}
+
+.siteNavLink:hover{color:var(--membership-ink);}
+
+.siteNavLink.is-active{
+  border-bottom-color:var(--membership-ink);
+  color:var(--membership-ink);
+  font-weight:700;
+}
+
+/* ── 셸 · 공통 타이포 ───────────────────────────────────── */
+
+.membershipShell{
+  width:min(var(--membership-measure-page),100% - var(--membership-measure-gutter));
+  margin:0 auto;
+  padding-bottom:var(--membership-space-2xl);
+}
+
+.eyebrow{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:var(--membership-space-md);
+  color:var(--membership-muted);
+  font-size:var(--membership-font-utility);
+  font-weight:400;
+  letter-spacing:.14em;
   text-transform:uppercase;
 }
 
 h1{
-  margin-top:var(--membership-space-xs);
+  margin-top:var(--membership-space-xl);
   color:var(--membership-ink);
-  font-size:var(--membership-font-search);
-  font-weight:700;
-  line-height:1.21;
-  letter-spacing:-.02em;
+  font-size:var(--membership-font-display);
+  font-weight:var(--membership-weight-display);
+  line-height:.98;
+  letter-spacing:var(--membership-track-display);
 }
 
 h2{
-  margin-top:var(--membership-space-xs);
+  margin-top:var(--membership-space-md);
   color:var(--membership-ink);
-  font-size:var(--membership-font-body);
-  font-weight:700;
+  font-size:var(--membership-font-section);
+  font-weight:800;
+  line-height:1.1;
+  letter-spacing:-.03em;
 }
 
 h3{
   color:var(--membership-ink);
   font-size:var(--membership-font-body);
   font-weight:700;
-}
-
-.heroCopy{
-  max-width:560px;
-  margin-top:var(--membership-space-lg);
-  color:var(--membership-muted);
-  font-size:var(--membership-font-utility);
-  line-height:1.7;
-}
-
-.heroLinks{
-  display:flex;
-  flex-wrap:wrap;
-  align-items:center;
-  gap:var(--membership-space-md);
+  letter-spacing:-.01em;
 }
 
 .conceptBadge{
   display:inline-flex;
   align-items:center;
-  height:var(--membership-measure-control);
+  height:22px;
   padding:0 var(--membership-space-md);
   border:var(--membership-border-active) solid var(--membership-ink);
   border-radius:var(--membership-radius-pill);
   color:var(--membership-ink);
-  font-size:var(--membership-font-utility);
-  font-weight:700;
-  letter-spacing:.08em;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.14em;
 }
 
-.pillLink{
+.buttonPrimary,.buttonGhost{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  height:var(--membership-measure-control);
-  padding:0 var(--membership-space-md);
-  border:0;
+  height:var(--membership-measure-field);
+  padding:0 var(--membership-space-xl);
+  border:var(--membership-border-hairline) solid var(--membership-ink);
   border-radius:var(--membership-radius-pill);
-  background:var(--membership-pill);
-  color:var(--membership-muted);
+  background:var(--membership-ink);
+  color:var(--membership-on-ink);
   font-size:var(--membership-font-utility);
+  font-weight:700;
+  letter-spacing:.02em;
   text-decoration:none;
+  transition:background .18s var(--membership-ease),color .18s var(--membership-ease);
 }
 
-.statusBand{
-  min-height:var(--membership-measure-control);
+.buttonPrimary:hover{background:var(--membership-black);}
+
+.buttonGhost{
+  border-color:var(--membership-rule);
+  background:var(--membership-canvas);
+  color:var(--membership-ink);
+  font-weight:400;
+}
+
+.buttonGhost:hover{border-color:var(--membership-ink);}
+
+/* ── 히어로 ─────────────────────────────────────────────── */
+
+.memberHero{
+  display:grid;
+  grid-template-columns:minmax(0,1.06fr) minmax(0,.94fr);
+  align-items:center;
+  gap:var(--membership-space-2xl);
+  padding:var(--membership-space-3xl) 0 var(--membership-space-2xl);
+}
+
+.heroLead{
+  max-width:44ch;
   margin-top:var(--membership-space-xl);
-  padding:var(--membership-space-md) var(--membership-space-lg);
+  color:var(--membership-muted);
+  font-size:var(--membership-font-lead);
+  line-height:1.75;
+}
+
+.heroLead b{color:var(--membership-ink);font-weight:700;}
+
+.heroStats{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:var(--membership-space-xl);
+  margin-top:var(--membership-space-2xl);
+  padding-top:var(--membership-space-xl);
+  border-top:var(--membership-border-active) solid var(--membership-ink);
+}
+
+.heroStats dt{
+  color:var(--membership-muted);
+  font-size:11px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+
+.heroStats dd{
+  margin-top:var(--membership-space-sm);
+  color:var(--membership-ink);
+  font-size:var(--membership-font-body);
+  font-weight:800;
+  letter-spacing:-.01em;
+}
+
+.heroActions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:var(--membership-space-lg);
+  margin-top:var(--membership-space-xl);
+}
+
+.heroStack{
+  position:relative;
+  aspect-ratio:1/1;
+  width:100%;
+}
+
+.stackItem{
+  position:absolute;
+  width:62%;
+  border:var(--membership-border-hairline) solid var(--membership-rule);
+  border-radius:var(--membership-radius-panel);
+  background:var(--membership-surface);
+  box-shadow:0 0 0 8px var(--membership-canvas);
+  overflow:hidden;
+}
+
+.stackItem canvas{width:100%;height:auto;aspect-ratio:1/1;}
+
+.stackItem figcaption{
+  position:absolute;
+  top:var(--membership-space-md);
+  left:var(--membership-space-md);
+  display:inline-flex;
+  align-items:center;
+  height:22px;
+  padding:0 var(--membership-space-md);
+  border-radius:var(--membership-radius-pill);
+  background:var(--membership-canvas);
+  color:var(--membership-muted);
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.1em;
+}
+
+.stackItem--back{top:0;left:0;z-index:1;}
+.stackItem--mid{top:14%;left:19%;z-index:2;}
+.stackItem--front{top:28%;left:38%;z-index:3;}
+
+.stackItem--front figcaption{background:var(--membership-ink);color:var(--membership-on-ink);}
+
+/* ── 상태 밴드 · 컨셉 3축 ───────────────────────────────── */
+
+.statusBand{
+  padding:var(--membership-space-lg) var(--membership-space-xl);
   border:var(--membership-border-hairline) solid var(--membership-hairline);
   border-radius:var(--membership-radius-sm);
   background:var(--membership-surface);
   color:var(--membership-muted);
   font-size:var(--membership-font-utility);
-  line-height:1.5;
+  line-height:1.6;
 }
 
 .conceptRow{
@@ -153,33 +348,245 @@ h3{
   grid-template-columns:repeat(3,minmax(0,1fr));
   gap:var(--membership-space-xl);
   margin-top:var(--membership-space-xl);
+  padding-top:var(--membership-space-xl);
+  border-top:var(--membership-border-hairline) solid var(--membership-rule);
 }
 
 .conceptCard{
   display:grid;
   align-content:start;
   gap:var(--membership-space-lg);
-  padding:var(--membership-space-xl);
-  border:var(--membership-border-hairline) solid var(--membership-hairline);
-  border-radius:var(--membership-radius-panel);
 }
 
-.conceptCard p,.stageCard span,.signatureMeta span,.flowList li,.panelNote{
+.conceptCard p,.stageChange p,.perkCard p,.signatureMeta span,.flowList li,.panelNote,.sectionNote{
   color:var(--membership-muted);
   font-size:var(--membership-font-utility);
   font-weight:400;
-  line-height:1.7;
+  line-height:1.75;
 }
+
+.sectionNote b{color:var(--membership-ink);font-weight:700;}
 
 .conceptStep{
   color:var(--membership-muted);
-  font-size:var(--membership-font-utility);
-  letter-spacing:.08em;
+  font-size:11px;
+  letter-spacing:.16em;
 }
 
-.evolutionPanel,.signaturePanel{
+/* ── 섹션 헤드 ──────────────────────────────────────────── */
+
+.sectionHead{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,360px);
+  align-items:end;
+  gap:var(--membership-space-xl);
+  padding-bottom:var(--membership-space-xl);
+  border-bottom:var(--membership-border-active) solid var(--membership-ink);
+}
+
+/* ── 스크롤 내러티브 ────────────────────────────────────── */
+
+.evolutionSection{padding-top:var(--membership-space-3xl);}
+
+.evolutionBody{margin-top:var(--membership-space-2xl);}
+
+.stageList{list-style:none;display:grid;}
+
+.stage{
+  position:relative;
+  display:grid;
+  grid-template-columns:var(--membership-measure-rail) minmax(0,1fr);
+  gap:var(--membership-space-xl);
+  padding-bottom:var(--membership-space-3xl);
+}
+
+.stage:last-child{padding-bottom:0;}
+
+.stageRail{position:relative;}
+
+.stageNumber{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:44px;
+  height:44px;
+  border:var(--membership-border-active) solid var(--membership-rule);
+  border-radius:var(--membership-radius-pill);
+  background:var(--membership-canvas);
+  color:var(--membership-muted);
+  font-size:var(--membership-font-utility);
+  font-weight:800;
+  letter-spacing:.04em;
+  transition:background .3s var(--membership-ease),color .3s var(--membership-ease),border-color .3s var(--membership-ease);
+}
+
+/* 연결선 — 마지막 회차에는 그리지 않는다. */
+.stage:not(:last-child) .stageRail::after{
+  content:"";
+  position:absolute;
+  top:52px;
+  bottom:calc(var(--membership-space-3xl) * -1);
+  left:21px;
+  width:var(--membership-border-active);
+  background:var(--membership-rule);
+}
+
+.stage.is-revealed .stageNumber{
+  border-color:var(--membership-ink);
+  background:var(--membership-ink);
+  color:var(--membership-on-ink);
+}
+
+.stageBody{
+  display:grid;
+  grid-template-columns:minmax(0,var(--membership-measure-stage)) minmax(0,1fr);
+  align-items:start;
+  gap:var(--membership-space-2xl);
+}
+
+/* 기본 상태는 보이는 상태다 — 관찰자가 동작하지 않아도 내용이 사라지지 않는다. */
+@media(prefers-reduced-motion:no-preference){
+  .stage.is-revealed .stageBody{animation:stageRise .5s var(--membership-ease) both;}
+}
+
+@keyframes stageRise{
+  from{opacity:0;transform:translateY(14px);}
+  to{opacity:1;transform:none;}
+}
+
+.stageFrame{
+  overflow:hidden;
+  border:var(--membership-border-hairline) solid var(--membership-rule);
+  border-radius:var(--membership-radius-panel);
+  background:var(--membership-surface);
+  aspect-ratio:1/1;
+}
+
+.stage--current .stageFrame{border:var(--membership-border-active) solid var(--membership-ink);}
+
+.stageFrame canvas{width:100%;height:100%;}
+
+.stageText{display:grid;align-content:start;gap:var(--membership-space-lg);}
+
+.stageHead{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:var(--membership-space-md);
+  padding-bottom:var(--membership-space-lg);
+  border-bottom:var(--membership-border-hairline) solid var(--membership-hairline);
+}
+
+.stageHead h3{font-size:var(--membership-font-index);font-weight:840;letter-spacing:-.03em;}
+
+.stageHead time{
+  color:var(--membership-muted);
+  font-size:var(--membership-font-utility);
+}
+
+.stageChange{display:grid;gap:var(--membership-space-sm);max-width:62ch;}
+
+.stageChange b{
+  color:var(--membership-ink);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+}
+
+.deltaChips{display:flex;flex-wrap:wrap;gap:var(--membership-space-sm);}
+
+.deltaChip{
+  display:inline-flex;
+  align-items:center;
+  height:var(--membership-measure-control);
+  padding:0 var(--membership-space-lg);
+  border-radius:var(--membership-radius-pill);
+  background:var(--membership-pill);
+  color:var(--membership-muted);
+  font-size:var(--membership-font-utility);
+}
+
+.deltaChip--strong{background:var(--membership-ink);color:var(--membership-on-ink);font-weight:700;}
+
+.stageMeta{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:var(--membership-space-lg);
+  padding-top:var(--membership-space-lg);
+  border-top:var(--membership-border-hairline) solid var(--membership-hairline);
+}
+
+.stageMeta span,.signatureMeta span{
+  display:block;
+  color:var(--membership-muted);
+  font-size:11px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+
+.stageMeta b,.signatureMeta b{
+  display:block;
+  margin-top:var(--membership-space-xs);
+  overflow:hidden;
+  color:var(--membership-ink);
+  font-size:var(--membership-font-utility);
+  font-weight:700;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.panelNote{max-width:72ch;margin-top:var(--membership-space-xl);}
+
+/* ── 혜택 ───────────────────────────────────────────────── */
+
+.perkSection{padding-top:var(--membership-space-3xl);}
+
+.perkGrid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:var(--membership-space-xl);
   margin-top:var(--membership-space-xl);
-  border:var(--membership-border-hairline) solid var(--membership-hairline);
+}
+
+.perkCard{
+  display:grid;
+  align-content:start;
+  gap:var(--membership-space-lg);
+  padding:var(--membership-space-xl);
+  border:var(--membership-border-hairline) solid var(--membership-rule);
+  border-radius:var(--membership-radius-panel);
+  transition:border-color .18s var(--membership-ease);
+}
+
+.perkCard:hover{border-color:var(--membership-muted);}
+
+.perkIndex{
+  color:var(--membership-ink);
+  font-size:var(--membership-font-index);
+  font-weight:var(--membership-weight-display);
+  letter-spacing:-.04em;
+  line-height:1;
+}
+
+.perkFoot{
+  padding-top:var(--membership-space-lg);
+  border-top:var(--membership-border-hairline) solid var(--membership-hairline);
+  color:var(--membership-muted);
+  font-size:11px;
+  letter-spacing:.1em;
+}
+
+.perkFoot a{color:var(--membership-ink);font-weight:700;text-decoration:none;}
+
+.perkFoot a:hover{text-decoration:underline;}
+
+/* ── 시그니처 카드 ──────────────────────────────────────── */
+
+.signaturePanel{
+  margin-top:var(--membership-space-3xl);
+  border:var(--membership-border-hairline) solid var(--membership-rule);
   border-radius:var(--membership-radius-panel);
   background:var(--membership-canvas);
   box-shadow:var(--membership-shadow-none);
@@ -196,77 +603,7 @@ h3{
   border-bottom:var(--membership-border-hairline) solid var(--membership-hairline);
 }
 
-.evolutionTrack{
-  display:grid;
-  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);
-  align-items:stretch;
-  gap:var(--membership-space-lg);
-  padding:var(--membership-space-xl);
-}
-
-.stageArrow{
-  align-self:center;
-  color:var(--membership-muted);
-  font-size:var(--membership-font-search);
-  line-height:1;
-}
-
-.stageCard{
-  display:grid;
-  gap:var(--membership-space-lg);
-  padding:var(--membership-space-lg);
-  border:var(--membership-border-hairline) solid var(--membership-hairline);
-  border-radius:var(--membership-radius-sm);
-}
-
-.stageCard.stageCard--current{
-  border:var(--membership-border-active) solid var(--membership-ink);
-  padding:calc(var(--membership-space-lg) - 1px);
-}
-
-.stageFrame{
-  overflow:hidden;
-  border-radius:var(--membership-radius-sm);
-  background:var(--membership-surface);
-  aspect-ratio:1/1;
-}
-
-.stageFrame canvas{
-  display:block;
-  width:100%;
-  height:100%;
-}
-
-.stageHead{
-  display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  gap:var(--membership-space-md);
-}
-
-.stageMeta{
-  display:grid;
-  gap:var(--membership-space-md);
-}
-
-.stageMeta b,.signatureMeta b{
-  display:block;
-  margin-top:var(--membership-space-xxs);
-  color:var(--membership-ink);
-  font-size:var(--membership-font-utility);
-  font-weight:700;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-.panelNote{
-  padding:0 var(--membership-space-xl) var(--membership-space-xl);
-}
-
-.signatureSide .panelNote{
-  padding:0;
-}
+.panelHeader h2{margin-top:var(--membership-space-xxs);font-size:var(--membership-font-body);font-weight:700;letter-spacing:-.01em;}
 
 .signatureBody{
   display:grid;
@@ -282,17 +619,11 @@ h3{
   aspect-ratio:1/1;
 }
 
-.signatureFrame canvas{
-  display:block;
-  width:100%;
-  height:100%;
-}
+.signatureFrame canvas{width:100%;height:100%;}
 
-.signatureSide{
-  display:grid;
-  align-content:start;
-  gap:var(--membership-space-xl);
-}
+.signatureSide{display:grid;align-content:start;gap:var(--membership-space-xl);}
+
+.signatureSide .panelNote{margin-top:0;}
 
 .signatureMeta{
   display:grid;
@@ -300,11 +631,7 @@ h3{
   gap:var(--membership-space-lg);
 }
 
-.paletteRow{
-  display:flex;
-  gap:var(--membership-space-xs);
-  margin-top:var(--membership-space-xxs);
-}
+.paletteRow{display:flex;gap:var(--membership-space-xs);margin-top:var(--membership-space-sm);}
 
 .paletteRow i{
   width:var(--membership-space-xl);
@@ -315,17 +642,81 @@ h3{
 .flowList{
   display:grid;
   gap:var(--membership-space-lg);
+  margin-top:var(--membership-space-lg);
   padding-left:var(--membership-space-xl);
 }
 
 .emptyState{
-  padding:var(--membership-space-xl);
+  padding:var(--membership-space-2xl);
+  border:var(--membership-border-hairline) solid var(--membership-hairline);
+  border-radius:var(--membership-radius-panel);
+  color:var(--membership-muted);
+  font-size:var(--membership-font-utility);
+  list-style:none;
+}
+
+/* ── 푸터 ───────────────────────────────────────────────── */
+
+.siteFooter{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:space-between;
+  gap:var(--membership-space-lg);
+  margin-top:var(--membership-space-3xl);
+  padding-top:var(--membership-space-xl);
+  border-top:var(--membership-border-hairline) solid var(--membership-rule);
   color:var(--membership-muted);
   font-size:var(--membership-font-utility);
 }
 
-@media(max-width:900px){
-  .membershipShell{width:min(100% - var(--membership-space-xl),var(--membership-measure-page));}
-  .membershipHero,.conceptRow,.evolutionTrack,.signatureBody{display:grid;grid-template-columns:1fr;}
-  .stageArrow{display:none;}
+.siteFooter b{color:var(--membership-ink);font-weight:800;letter-spacing:.14em;}
+
+.siteFooterNav{display:flex;flex-wrap:wrap;gap:var(--membership-space-xl);}
+
+.siteFooterNav a{color:var(--membership-muted);text-decoration:none;}
+
+.siteFooterNav a:hover{color:var(--membership-ink);}
+
+/* ── 반응형 ─────────────────────────────────────────────── */
+
+@media(max-width:1080px){
+  .memberHero{grid-template-columns:1fr;gap:var(--membership-space-2xl);padding-top:var(--membership-space-2xl);}
+  .heroShowcase{max-width:520px;}
+  .stageBody{grid-template-columns:1fr;gap:var(--membership-space-xl);}
+  .stageFrame{max-width:var(--membership-measure-stage);}
+  .sectionHead{grid-template-columns:1fr;align-items:start;}
+  .signatureBody{grid-template-columns:1fr;}
+  .signatureFrame{max-width:var(--membership-measure-signature);}
+}
+
+@media(max-width:720px){
+  :root{--membership-space-3xl:56px;--membership-measure-rail:44px;}
+  .siteNav{gap:var(--membership-space-lg);}
+  .conceptRow,.perkGrid{grid-template-columns:1fr;gap:var(--membership-space-xl);}
+  .heroStats{gap:var(--membership-space-lg);}
+  .heroActions .buttonPrimary,.heroActions .buttonGhost{flex:1 1 auto;}
+  .stage{grid-template-columns:36px minmax(0,1fr);gap:var(--membership-space-lg);}
+  .stageNumber{width:36px;height:36px;font-size:11px;}
+  .stage:not(:last-child) .stageRail::after{top:44px;left:17px;}
+  .stageMeta{grid-template-columns:1fr;}
+  .signatureMeta{grid-template-columns:1fr;}
+  .siteFooter{flex-direction:column;align-items:flex-start;}
+  /* 좁은 화면에서는 겹친 스택 대신 나란한 3열로 — 캡션이 서로를 가리지 않는다. */
+  .heroStack{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--membership-space-md);aspect-ratio:auto;}
+  .stackItem{position:static;width:auto;box-shadow:none;}
+  .stackItem figcaption{position:static;height:auto;padding:var(--membership-space-sm) var(--membership-space-md);background:var(--membership-canvas);}
+  .stackItem--front figcaption{background:var(--membership-ink);}
+}
+
+@media(max-width:420px){
+  :root{--membership-measure-gutter:28px;}
+  .siteMark span{display:none;}
+  .heroStats{grid-template-columns:1fr;}
+  .heroStats div{padding-bottom:var(--membership-space-lg);border-bottom:var(--membership-border-hairline) solid var(--membership-hairline);}
+}
+
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  *{transition-duration:.01ms !important;animation-duration:.01ms !important;}
 }
