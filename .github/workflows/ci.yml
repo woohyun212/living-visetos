@@ -1,0 +1,46 @@
+# CI — main 은 항상 데모 가능해야 한다 (DEV_SETUP §5).
+# push·PR 마다 npm ci → typecheck → test → build 를 그대로 재현한다.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: typecheck · test · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 체크아웃
+        uses: actions/checkout@v4
+
+      # package.json engines 는 >=22.6.0 (npm test 가 --experimental-strip-types 를 쓴다).
+      # 22.x 로 고정한다 — latest 로 두면 Node 24 러너에서 타입 스트립 플래그 동작이 달라질 수 있다.
+      - name: Node 22.x 준비
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+
+      # postinstall(scripts/sync-mediapipe-wasm.mjs)이 public/wasm 을 채운다 (ADR-003).
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: 타입체크
+        run: npm run typecheck
+
+      - name: 테스트
+        run: npm test
+
+      - name: 빌드
+        run: npm run build
