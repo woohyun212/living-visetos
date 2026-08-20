@@ -57,6 +57,8 @@ export class OverlayLayer {
   /** 녹화 게이트(F-05): 렌더된 프레임 수·대기자 — 첫 프레임 전 캡처(투명 포스터)를 막는다 */
   private renderedFrameCount = 0;
   private readonly frameWaiters = new Set<() => void>();
+  /** 렌더 직후 동기 구독자(세로 녹화 합성기) — waitForFrame 의 1회성 대기자와 달리 계속 남는다. */
+  private readonly frameListeners = new Set<() => void>();
 
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene: THREE.Scene;
@@ -162,6 +164,18 @@ export class OverlayLayer {
     return frameReady;
   }
 
+  /**
+   * 렌더 직후(동기)에 불리는 콜백을 건다. 해제 함수를 돌려준다.
+   * ⚠️ 이 캔버스는 preserveDrawingBuffer:false 이므로 drawImage 로 픽셀을 읽을 수 있는
+   *    유일한 창이 이 콜백 안이다(D · output/portrait.ts 의 세로 합성이 여기에 붙는다).
+   */
+  onFrameRendered(listener: () => void): () => void {
+    this.frameListeners.add(listener);
+    return () => {
+      this.frameListeners.delete(listener);
+    };
+  }
+
   waitForFrame(timeoutMs = FIRST_FRAME_TIMEOUT_MS): Promise<void> {
     const frameCount = this.renderedFrameCount;
 
@@ -242,6 +256,16 @@ export class OverlayLayer {
 
   private notifyFrameRendered(): void {
     this.renderedFrameCount += 1;
+
+    // 구독자 먼저 — 아직 백버퍼가 살아 있는 이 순간에만 픽셀을 복사할 수 있다.
+    for (const listener of this.frameListeners) {
+      try {
+        listener();
+      } catch (error) {
+        console.warn('[overlay] 프레임 구독자 오류', error);
+      }
+    }
+
     for (const resolve of this.frameWaiters) {
       resolve();
     }
