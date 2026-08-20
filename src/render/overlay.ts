@@ -10,6 +10,7 @@ import type { PatternTile } from '../contracts.ts';
 import type { Segmenter } from '../vision/segmenter.ts';
 
 const PATTERN_SCALE = 0.35; // 실루엣 위 타일 반복 크기
+const FIRST_FRAME_TIMEOUT_MS = 8000;
 
 export class OverlayLayer {
   private running = false;
@@ -37,7 +38,7 @@ export class OverlayLayer {
     void this.loop();
   }
 
-  waitForFrame(timeoutMs = 1500): Promise<void> {
+  waitForFrame(timeoutMs = FIRST_FRAME_TIMEOUT_MS): Promise<void> {
     const frameCount = this.renderedFrameCount;
 
     return new Promise((resolve, reject) => {
@@ -51,7 +52,7 @@ export class OverlayLayer {
       };
       const timeout = globalThis.setTimeout(() => {
         this.frameWaiters.delete(done);
-        reject(new Error('Overlay first frame was not ready in time.'));
+        reject(new Error('Overlay first mask frame was not ready in time.'));
       }, timeoutMs);
       this.frameWaiters.add(done);
     });
