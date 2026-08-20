@@ -51,6 +51,7 @@ const MIME_TYPES = new Map(Object.entries({
 // 여기서 즉시 죽어 systemd 가 드러내도록 한다.
 const resultsApi = (await import('./api/results.ts')).default;
 const ordersApi = (await import('./api/orders.ts')).default;
+const l2Api = (await import('./api/l2.ts')).default;
 
 const server = createServer((request, response) => {
   handle(request, response).catch((error) => {
@@ -68,6 +69,10 @@ async function handle(request, response) {
 
   if (isApiRoute(pathname, '/api/orders')) {
     return delegate(request, response, url, ordersApi, 'Local orders API failed.');
+  }
+
+  if (isApiRoute(pathname, '/api/l2')) {
+    return delegate(request, response, url, l2Api, 'Local L2 API failed.');
   }
 
   if (request.method !== 'GET' && request.method !== 'HEAD') {

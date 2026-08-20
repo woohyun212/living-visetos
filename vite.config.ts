@@ -53,6 +53,17 @@ function installLocalResultMiddlewares(server: LocalMiddlewareServer): void {
     }
   });
 
+  server.middlewares.use('/api/l2', async (request, response) => {
+    try {
+      const api = await import('./api/l2.ts');
+      await sendWebResponse(response, await api.default(
+        toWebRequest(request as unknown as LocalApiRequest, '/api/l2'),
+      ) as Response);
+    } catch (error) {
+      sendLocalApiFailure(response, 'Local L2 API failed.', error);
+    }
+  });
+
   server.middlewares.use((request, _response, next) => {
     const localRequest = request as unknown as { url?: string };
     const url = new URL(localRequest.url ?? '/', 'http://localhost');
@@ -74,7 +85,7 @@ type LocalApiRequest = {
 type LocalApiResponse = {
   statusCode: number;
   setHeader(key: string, value: string): void;
-  end(body: string): void;
+  end(body: string | Uint8Array): void;
 };
 
 function toWebRequest(request: LocalApiRequest, fallbackPath: string): Request {
@@ -109,7 +120,8 @@ async function sendWebResponse(
   webResponse.headers.forEach((value, key) => {
     response.setHeader(key, value);
   });
-  response.end(await webResponse.text());
+  // 바이너리 응답(L2 이미지 등)을 텍스트 변환으로 깨뜨리지 않는다.
+  response.end(new Uint8Array(await webResponse.arrayBuffer()));
 }
 
 function sendLocalApiFailure(
