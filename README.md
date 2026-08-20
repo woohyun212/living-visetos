@@ -32,6 +32,7 @@ npm run dev          # http://localhost:5173/results/ABCD-1234 → F-06 공개 �
 | --- | --- |
 | [`docs/DEV_SETUP.md`](docs/DEV_SETUP.md) | 누가·규칙 (모듈 분담, 브랜치, 통합의 날) |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 어떻게 (컴포넌트, 상태머신, ADR, 폴백 매트릭스) |
+| [`docs/OPERATIONS.md`](docs/OPERATIONS.md) | 현장에서 어떻게 수습하는가 (단축키, 폴백 영상 준비, 리허설) |
 | [`DESIGN.md`](DESIGN.md) | 어떻게 보이는가 (팔레트, 타이포, 컴포넌트) |
 | [`docs/skeleton_v0.html`](docs/skeleton_v0.html) | 이 리포가 태어난 v0 걷는 스켈레톤 (히스토리 · 단일 파일로 실행 가능) |
 
@@ -81,6 +82,30 @@ cloud/            D: Vercel Functions + 결과 페이지 (예정)
 - 보안: F-09 운영 GET 목록/상세와 `GET /api/orders`는 `Authorization: Bearer <RESULT_ADMIN_TOKEN>`이 필요하다. 키오스크 F-05 POST, 공개 결과 조회, 방문자 F-06 `POST /api/orders`는 같은 토큰을 요구하지 않는다.
 - 업로드 방어: F-05 POST는 서버에서 video/poster MIME과 용량을 제한하고, 함수 인스턴스 단위의 기본 rate limit을 둔다. 운영 배포에서는 Vercel/WAF 같은 플랫폼 rate limit도 같이 거는 것을 전제로 한다.
 - 한계: F-06 주문은 결제, 제작, 배송, 재고 차감이 없는 데모 기록이다. F-09는 Supabase에 업로드된 기록만 보여준다. 오프라인 IndexedDB 재시도 큐는 이 PR에서 drain하지 않는다. Signed URL은 버킷/오브젝트 권한이 맞아야 열리며, 현재 F-05 녹화본은 전체 최종 가방 합성이 아니라 `overlayCanvas` 기준이다.
+
+## 운영 — 현장 단축키와 폴백 (ARCHITECTURE §9)
+
+무인 키오스크는 고장 났을 때 **운영자가 손으로 되살릴 수 있어야** 한다. 무대 모드(`/`, `?debug=1` 없이)에는
+화면에 드러나지 않는 단축키 세 개가 걸려 있다. 자세한 절차는 [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
+
+| 키 | 하는 일 |
+| --- | --- |
+| `Shift+D` | 목 카메라 **데모 모드** 토글 — 웹캠이 죽어도 여정을 그대로 완주한다 (§9 '카메라 실패' 행) |
+| `Shift+R` | **강제 RESET** — 어떤 상태에서든 세션을 파기하고 처음 화면으로 |
+| `Shift+F` | **전체 장애 폴백 화면** 토글 — `public/assets/fallback.mp4` 재생 (§9 '전체 장애' 행) |
+
+- 단축키 목록은 **화면 어디에도 그리지 않는다.** 유일한 예외는 카메라 실패 화면(ERROR_RECOVER)의
+  `운영자 · Shift+D — 데모 모드로 계속` 한 줄이다. 그 화면에서만 필요한 탈출구이기 때문이다.
+- 데모 모드가 켜지면 무대에 `데모 모드 · 목 카메라` 표기가 작게 뜬다 — 관객을 속이지 않는다.
+- 키는 `event.code` 로 읽는다(한글 IME 에서 `event.key` 는 `ㅇ`·`ㄱ` 이 되어 단축키가 죽는다).
+  관객이 이름을 입력하는 동안에는 `Shift+D`·`Shift+F` 가 잠긴다. `Shift+R` 만 예외다 —
+  그 화면에서 데모 모드·폴백이 필요하면 `Shift+R` 로 먼저 빠져나온 뒤 누른다.
+- `?debug=1` 계기판에서는 단축키를 걸지 않는다. 대신 F-07 드랍·F-08 멤버십·F-09 대시보드로 가는
+  링크 줄이 상태 표시 아래에 뜬다(무대 모드에는 아예 만들어지지 않는다). 같은 링크가 `/admin.html` 헤더에도 있다.
+- **`public/assets/fallback.mp4` 는 리포에 없다** (`.gitignore` 의 `*.mp4`). 없으면 `Shift+F` 가
+  '폴백 영상 준비 필요' 플레이스홀더를 띄운다. 만드는 방법은 `docs/OPERATIONS.md` §2.
+- 폴백 리허설(개발 서버 전용): `?failCamera=1` 로 `getUserMedia` 를 거절시켜 CREATE → ERROR_RECOVER 를
+  카메라를 가리지 않고 재현한다. `?mockCamera=1` 은 카메라 없이 여정을 완주한다.
 
 **계약이 국경이다.** 모듈은 `src/contracts.ts`의 타입으로만 대화한다. 구현은 자유.
 계약 v1의 출처는 `docs/ARCHITECTURE.md` §5 (DEV_SETUP §3의 초안을 대체).

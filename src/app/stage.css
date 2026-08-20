@@ -507,6 +507,84 @@
   border-color: rgba(180, 36, 49, 0.6);
 }
 
+/* ERROR_RECOVER 안내 안의 운영자 탈출구 한 줄 (§9 '카메라 실패' 행).
+   관객 눈에도 보이지만, 무대 문구보다 한참 작고 흐리게 — 안내이지 연출이 아니다. */
+.stageOpsHint {
+  margin-top: 28px;
+  color: rgba(247, 243, 236, 0.34);
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+}
+.stageOpsHint:empty {
+  display: none;
+}
+
+/* ── 운영 레이어 (§9 폴백 매트릭스) ───────────────────────────
+   단축키 목록은 화면 어디에도 그리지 않는다 — README 운영 섹션이 유일한 출처다. */
+
+/* 데모 모드 표기 — 목 카메라로 도는 중임을 관객에게 숨기지 않는다. 작게, 위 구석에. */
+.stageDemoBadge {
+  position: absolute;
+  top: 48px;
+  left: 50%;
+  z-index: 30;
+  transform: translateX(-50%);
+  padding: 12px 28px;
+  border: 1px solid rgba(201, 162, 39, 0.5);
+  border-radius: 999px;
+  background: rgba(14, 12, 10, 0.6);
+  color: rgba(201, 162, 39, 0.9);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+}
+.stageDemoBadge[hidden] {
+  display: none;
+}
+
+/* 전체 장애 폴백 — 무대 전체를 덮는다. 여기만은 display 로 껐다 켠다(녹화 입력이 아니다). */
+.stageFallback {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  background: var(--st-ink);
+}
+.stageFallback[hidden] {
+  display: none;
+}
+.stageFallbackVideo,
+.stageFallbackPlaceholder {
+  grid-area: 1 / 1;
+}
+.stageFallbackVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.6s var(--st-ease);
+}
+.stageFallbackVideo.is-on {
+  opacity: 1;
+}
+/* 사전 녹화 영상이 아직 없을 때 — 관객에게는 점검 안내, 운영자에게는 준비할 파일 경로. */
+.stageFallbackPlaceholder {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 28px;
+  padding: 0 120px;
+  text-align: center;
+}
+.stageFallbackPlaceholder[hidden] {
+  display: none;
+}
+.stageFallbackPlaceholder .stageSub {
+  color: rgba(247, 243, 236, 0.42);
+  font-size: 28px;
+}
+
 /* 접근성 — 모션 민감 관객을 위한 정지 (패턴 루프는 JS 에서 함께 멈춘다). */
 @media (prefers-reduced-motion: reduce) {
   .stageMark,

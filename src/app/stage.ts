@@ -66,6 +66,13 @@ const IDLE_DRIFT = 0.007;
 
 const COUNTDOWN_TICK_MS = 500;
 
+/**
+ * 전체 장애 폴백 영상(§9 마지막 행). 리포에 커밋하지 않는다(.gitignore 의 *.mp4) —
+ * 운영자가 데모데이 전에 이 경로에 직접 놓는다. 준비 방법은 docs/OPERATIONS.md.
+ * 파일이 없으면 아래 플레이스홀더가 대신 뜬다.
+ */
+const FALLBACK_VIDEO_SRC = '/assets/fallback.mp4';
+
 type Handler<T> = (value: T) => void;
 const noop = (): void => {};
 
@@ -108,6 +115,11 @@ export class StageView implements KioskScreen {
   private readonly noticeEyebrow: HTMLParagraphElement;
   private readonly noticeHeadline: HTMLParagraphElement;
   private readonly noticeNote: HTMLParagraphElement;
+  private readonly noticeOpsHint: HTMLParagraphElement;
+  private readonly demoBadge: HTMLDivElement;
+  private readonly fallback: HTMLDivElement;
+  private readonly fallbackVideo: HTMLVideoElement;
+  private readonly fallbackPlaceholder: HTMLDivElement;
 
   private attractHandler: Handler<void> = noop;
   private consentHandler: Handler<boolean> = noop;
@@ -166,7 +178,27 @@ export class StageView implements KioskScreen {
     const bagSlot = el('div', 'stageBagSlot');
     bagSlot.append(options.bagWrap);
 
-    this.frame.append(idle, this.camera, veil, bagSlot, attract, consent, progress, own, notice);
+    // 5) 운영 레이어 — 관객에게는 데모 표기만, 폴백 화면은 운영자가 부를 때만.
+    this.demoBadge = text('div', 'stageDemoBadge', '데모 모드 · 목 카메라');
+    this.demoBadge.hidden = true;
+    this.fallback = this.buildFallback();
+    this.fallbackVideo = this.fallback.querySelector<HTMLVideoElement>('.stageFallbackVideo')!;
+    this.fallbackPlaceholder =
+      this.fallback.querySelector<HTMLDivElement>('.stageFallbackPlaceholder')!;
+
+    this.frame.append(
+      idle,
+      this.camera,
+      veil,
+      bagSlot,
+      attract,
+      consent,
+      progress,
+      own,
+      notice,
+      this.demoBadge,
+      this.fallback,
+    );
     document.body.append(this.root);
 
     this.scenes = { attract, consent, progress, own, notice };
@@ -179,6 +211,7 @@ export class StageView implements KioskScreen {
     this.noticeEyebrow = notice.querySelector<HTMLParagraphElement>('.stageEyebrow')!;
     this.noticeHeadline = notice.querySelector<HTMLParagraphElement>('.stageHeadline')!;
     this.noticeNote = notice.querySelector<HTMLParagraphElement>('.stageSub')!;
+    this.noticeOpsHint = notice.querySelector<HTMLParagraphElement>('.stageOpsHint')!;
 
     this.root.onclick = () => {
       if (this.root.dataset['scene'] === 'ATTRACT') this.attractHandler();
@@ -262,17 +295,25 @@ export class StageView implements KioskScreen {
     this.noticeEyebrow.textContent = '세션 종료';
     this.noticeHeadline.textContent = '고맙습니다';
     this.noticeNote.textContent = '방금 사용한 영상과 마스크는 이 순간 모두 지워졌습니다.';
+    this.noticeOpsHint.textContent = '';
   }
 
+  /**
+   * ERROR_RECOVER — 카메라·씨앗 추출이 실패한 유일한 화면(§4). 그래서 여기에만
+   * 운영자용 탈출구를 적어 둔다: 목 카메라 데모 모드로 여정을 이어가는 단축키(§9 '카메라 실패' 행).
+   * 나머지 단축키는 화면 어디에도 적지 않는다 — 무대는 관객의 것이다.
+   */
   showError(message: string): void {
     this.setScene('ERROR_RECOVER');
     this.noticeEyebrow.textContent = '다시 시도';
     this.noticeHeadline.textContent = '잠시 문제가 있었습니다';
     this.noticeNote.textContent = message;
+    this.noticeOpsHint.textContent = '운영자 · Shift+D — 데모 모드로 계속';
   }
 
   dispose(): void {
     this.stopCountdown();
+    this.hideFallback();
     this.stopIdle();
     this.idleCurrent?.close();
     this.idleNext?.close();
@@ -296,6 +337,33 @@ export class StageView implements KioskScreen {
     this.camera.dataset['overlay'] = on ? 'on' : 'off';
   }
 
+  /** 데모 모드(목 카메라) 표기 — 관객을 속이지 않는다. 작게, 구석에. */
+  setDemoMode(on: boolean): void {
+    this.demoBadge.hidden = !on;
+  }
+
+  /**
+   * 전체 장애 폴백 화면(§9 마지막 행) — 무대 전체를 사전 녹화 영상으로 덮는다.
+   * 영상이 없으면 '폴백 영상 준비 필요' 플레이스홀더가 그대로 남는다(운영자만 보는 화면이 아니므로
+   * 관객에게도 읽히는 문구로 쓴다).
+   */
+  showFallback(): void {
+    this.fallback.hidden = false;
+    this.fallbackVideo.classList.remove('is-on');
+    this.fallbackPlaceholder.hidden = false;
+    this.fallbackVideo.src = FALLBACK_VIDEO_SRC;
+    void this.fallbackVideo.play().catch(() => {
+      // 파일이 없거나 자동재생이 막혔다 — 플레이스홀더가 화면을 지킨다.
+    });
+  }
+
+  hideFallback(): void {
+    this.fallback.hidden = true;
+    this.fallbackVideo.pause();
+    this.fallbackVideo.removeAttribute('src');
+    this.fallbackVideo.load(); // 디코더·네트워크 요청을 놓는다
+  }
+
   // ── 내부: 레이아웃 ─────────────────────────────
   /** 창이 1080×1920 이 아니어도 비율을 지킨다 — 모자란 쪽을 잘라내는 cover. */
   private fit(): void {
@@ -311,6 +379,17 @@ export class StageView implements KioskScreen {
       node.classList.toggle('is-on', name === active);
     }
     if (active !== 'consent') this.stopCountdown();
+
+    /*
+     * OWN 을 떠나면 이름 카드를 비운다. 두 가지 이유가 있고 둘 다 실제로 물린다.
+     *   1) 앞 관객이 친 이름이 다음 장면 뒤에 DOM 으로 남는다 (원칙 4).
+     *   2) 사라진 #patternNameInput 이 계속 포커스를 쥐고 있으면 app/ops.ts 의 입력 가드가
+     *      Shift+D·Shift+F 를 영영 막는다 — 첫 관객 이후로 운영자 단축키가 먹통이 된다.
+     */
+    if (active !== 'own') {
+      this.ownCard.hidden = true;
+      this.ownCard.replaceChildren();
+    }
 
     // 유휴 루프는 ATTRACT/CONSENT/RESET/ERROR_RECOVER 배경에서만 돈다.
     // CREATE 의 씨앗 추출 예산(1.5s)을 배경 렌더가 갉아먹지 않게 나머지에서는 멈춘다.
@@ -486,9 +565,39 @@ export class StageView implements KioskScreen {
       text('p', 'stageEyebrow', ''),
       text('p', 'stageHeadline', ''),
       text('p', 'stageSub', ''),
+      text('p', 'stageOpsHint', ''),
     );
     scene.append(card);
     return scene;
+  }
+
+  /** 폴백 레이어 — 영상이 재생되면 플레이스홀더를 덮고, 실패하면 플레이스홀더가 남는다. */
+  private buildFallback(): HTMLDivElement {
+    const layer = el('div', 'stageFallback');
+    layer.hidden = true;
+
+    const video = el('video', 'stageFallbackVideo');
+    video.muted = true;
+    video.loop = true;
+    video.playsInline = true;
+    video.onplaying = () => {
+      video.classList.add('is-on');
+      this.fallbackPlaceholder.hidden = true;
+    };
+    video.onerror = () => {
+      video.classList.remove('is-on');
+      this.fallbackPlaceholder.hidden = false;
+    };
+
+    const placeholder = el('div', 'stageFallbackPlaceholder');
+    placeholder.append(
+      text('p', 'stageEyebrow', '점검 중'),
+      text('p', 'stageHeadline', '잠시 후 다시 만나요'),
+      text('p', 'stageSub', '폴백 영상 준비 필요 — public/assets/fallback.mp4 (docs/OPERATIONS.md)'),
+    );
+
+    layer.append(video, placeholder);
+    return layer;
   }
 
   private buildNameForm(defaultName: string): HTMLFormElement {

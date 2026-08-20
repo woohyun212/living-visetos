@@ -126,3 +126,35 @@ test('타임아웃을 끄면(?debug=1) 타이머가 잡히지 않는다', () => 
   assert.equal(machine.remainingMs, null);
   machine.dispose();
 });
+
+test('forceTo 는 전이 표 밖이어도 통과시킨다 — 운영자 강제 RESET (§9)', () => {
+  const machine = new StateMachine();
+  machine.setTimeoutsEnabled(false);
+  machine.to('CONSENT');
+  machine.to('CREATE');
+
+  // CREATE → RESET 은 표에 없다. 일반 경로는 막히고, 강제 경로만 통과한다.
+  assert.equal(TRANSITIONS.CREATE.includes('RESET'), false);
+  assert.equal(machine.to('RESET'), false);
+  assert.equal(machine.state, 'CREATE');
+
+  const seen: [KioskState, string][] = [];
+  machine.onChange((next, _prev, reason) => seen.push([next, reason]));
+  machine.forceTo('RESET');
+  // 리스너가 불려야 RESET 진입의 에포크 증가·세션 파기가 그대로 일어난다.
+  assert.deepEqual(seen, [['RESET', 'operator']]);
+  assert.equal(machine.state, 'RESET');
+
+  // 강제로 들어가도 RESET 은 표에 따라 ATTRACT 로 이어질 수 있다 (막다른 곳이 아니다).
+  assert.equal(machine.to('ATTRACT'), true);
+  machine.dispose();
+});
+
+test('강제 RESET 뒤에도 상태별 타임아웃 표가 그대로 걸린다', () => {
+  const machine = new StateMachine();
+  machine.to('CONSENT');
+  machine.forceTo('RESET');
+  const remaining = machine.remainingMs ?? 0;
+  assert.ok(remaining > 0 && remaining <= STATE_TIMEOUTS.RESET!.ms);
+  machine.dispose();
+});

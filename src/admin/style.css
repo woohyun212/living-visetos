@@ -114,6 +114,14 @@ h2{
   line-height:1.7;
 }
 
+/* 운영 화면에서 F-07 드랍·F-08 멤버십 목업으로 가는 샛길 (무대에는 노출하지 않는다). */
+.adminLinks{
+  display:flex;
+  flex-wrap:wrap;
+  gap:var(--admin-space-md);
+  justify-content:flex-end;
+}
+
 .kioskLink{
   display:inline-flex;
   align-items:center;
