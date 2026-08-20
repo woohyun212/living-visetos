@@ -461,12 +461,13 @@
   border-radius: 8px;
 }
 /* 비디오월은 멀리서 본다 — 스캔 가능 최소치(200px)의 두 배로 키운다.
+   256px 백킹스토어의 **정수배(2×)** 여야 nearest-neighbour 확대에서 모듈 폭이 고르다.
+   420px 같은 어중간한 배율은 모듈마다 픽셀 폭이 달라져 오히려 스캔률을 깎는다.
    !important 는 취향이 아니라 필요다: qrcode 라이브러리가 캔버스에 인라인 width/height 를
    직접 박아 넣기 때문에 선택자 특정도로는 이길 수 없다. */
 .is-stage .stageScene--own #resultQrCanvas {
-  width: 420px !important;
-  height: 420px !important;
-  /* 256px 백킹스토어를 420px 로 키운다 — 보간하면 모듈 경계가 흐려져 스캔이 떨어진다. */
+  width: 512px !important;
+  height: 512px !important;
   image-rendering: pixelated;
 }
 .is-stage .stageScene--own .resultCardCopy {
