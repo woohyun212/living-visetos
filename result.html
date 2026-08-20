@@ -2,71 +2,141 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>리빙 비세토스 - 결과</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>리빙 비세토스 — 나의 패턴</title>
 <link rel="icon" href="data:,">
 <link rel="preload" href="/assets/fonts/PretendardVariable.woff2" as="font" type="font/woff2" crossorigin>
 </head>
 <body>
-<main class="resultShell" aria-labelledby="resultTitle">
-  <header class="resultHero">
-    <div>
-      <p class="eyebrow">D · F-06</p>
-      <h1 id="resultTitle">나의 비세토스 결과</h1>
-      <p class="heroCopy">키오스크에서 업로드된 패턴 결과를 확인하고, 데모 전용 목업 주문을 남길 수 있습니다.</p>
-    </div>
-    <a class="pillLink" href="/">키오스크</a>
+<main class="page" aria-labelledby="resultTitle">
+  <h1 id="resultTitle" class="srOnly">나의 비세토스 패턴 결과</h1>
+  <header class="topBar">
+    <p class="wordmark">리빙 비세토스</p>
+    <a class="ghostLink" href="/">키오스크</a>
   </header>
 
-  <section class="statusBand" id="statusBand" aria-live="polite">결과 코드를 확인하는 중입니다.</section>
+  <!-- 히어로: 세로 9:16 영상이 화면 상단의 주인공. 로드 전에는 skeleton 만 보인다. -->
+  <section class="hero" id="hero" data-state="loading" aria-label="결과 영상">
+    <div class="stage" id="stage">
+      <video
+        class="stageVideo"
+        id="resultVideo"
+        playsinline
+        controls
+        preload="metadata"
+        hidden
+      ></video>
+      <div class="stageFallback" id="stageFallback" aria-hidden="true">
+        <span class="stageMark">비세토스</span>
+      </div>
+      <div class="stageSkeleton" id="stageSkeleton" aria-hidden="true"></div>
+    </div>
+    <p class="saveHint" id="saveHint" hidden>영상을 길게 눌러 <b>동영상 저장</b>을 선택하면 내 폰에 남길 수 있어요.</p>
+  </section>
 
-  <div class="resultGrid">
-    <section class="resultPanel" aria-labelledby="detailTitle">
-      <div class="panelHeader">
-        <div>
-          <p class="eyebrow">Uploaded result</p>
-          <h2 id="detailTitle">결과 상세</h2>
+  <p class="statusBand" id="statusBand" role="status" aria-live="polite">결과를 불러오는 중입니다.</p>
+
+  <!-- 인증 카드: 한정판 1점의 증서 -->
+  <section class="card certCard" id="certCard" aria-labelledby="certTitle" hidden>
+    <div class="certTop">
+      <span class="badge badgeSolid">EDITION 1 OF 1</span>
+      <span class="certVerified">단 한 번의 세션에서 생성됨</span>
+    </div>
+    <p class="certLabel">PATTERN</p>
+    <h2 class="certName" id="certTitle">—</h2>
+    <dl class="certFacts">
+      <div>
+        <dt>발급 시각</dt>
+        <dd id="certIssuedAt">—</dd>
+      </div>
+      <div>
+        <dt>세션 코드</dt>
+        <dd class="mono" id="certCode">—</dd>
+      </div>
+    </dl>
+    <details class="tileMeta" id="tileMeta" hidden>
+      <summary>패턴 상세 정보</summary>
+      <div class="tileMetaBody">
+        <div class="metaRow" id="paletteRow">
+          <span class="metaKey">팔레트</span>
+          <div class="swatches" id="paletteSwatches"></div>
+        </div>
+        <div class="metaRow" id="spacingRow">
+          <span class="metaKey">간격</span>
+          <span class="metaValue" id="spacingValue">—</span>
+        </div>
+        <div class="metaRow" id="densityRow">
+          <span class="metaKey">모티프 밀도</span>
+          <span class="metaValue" id="densityValue">—</span>
         </div>
       </div>
-      <div class="detailContent" id="detailContent">
-        <p class="emptyState">결과를 불러오는 중입니다.</p>
-      </div>
-    </section>
+    </details>
+    <div class="shareRow">
+      <button class="button buttonPrimary" id="shareButton" type="button" hidden>공유하기</button>
+      <a class="button buttonQuiet" id="videoLink" href="#" target="_blank" rel="noopener noreferrer" hidden>영상 원본 열기</a>
+    </div>
+    <label class="copyFallback" id="copyFallback" hidden>
+      <span>이 주소를 길게 눌러 복사해 주세요.</span>
+      <input id="copyField" type="text" readonly>
+    </label>
+    <p class="shareStatus" id="shareStatus" aria-live="polite"></p>
+  </section>
 
-    <section class="orderPanel" aria-labelledby="orderTitle">
-      <div class="panelHeader">
-        <div>
-          <p class="eyebrow">Mock order only</p>
-          <h2 id="orderTitle">데모 주문</h2>
-        </div>
-      </div>
-      <form class="orderForm" id="orderForm" novalidate>
-        <p class="mockNotice">결제, 제작, 배송, 재고 차감이 없는 F-06 데모 기록입니다.</p>
-        <label>
-          <span>이름 또는 닉네임</span>
-          <input id="visitorName" name="visitorName" type="text" maxlength="40" autocomplete="name" required>
-        </label>
-        <label>
-          <span>연락처</span>
-          <input id="contact" name="contact" type="text" maxlength="80" autocomplete="email" placeholder="email@example.com 또는 010-0000-0000" required>
-        </label>
-        <label>
-          <span>상품 옵션</span>
-          <select id="productOption" name="productOption" required>
-            <option value="classic-tote">Classic tote mock</option>
-            <option value="mini-tote">Mini tote mock</option>
-            <option value="flat-pouch">Flat pouch mock</option>
-          </select>
-        </label>
-        <label class="consentRow">
-          <input id="consent" name="consent" type="checkbox" required>
-          <span>목업 주문 기록 저장에 동의합니다. 실제 결제나 배송 요청이 아님을 확인했습니다.</span>
-        </label>
-        <button class="submitButton" id="submitButton" type="submit">목업 주문 남기기</button>
-        <p class="formStatus" id="formStatus" aria-live="polite"></p>
-      </form>
-    </section>
-  </div>
+  <!-- 빈 상태: 잘못된 코드 / 없는 결과 / 만료 -->
+  <section class="card emptyCard" id="emptyCard" aria-labelledby="emptyTitle" hidden>
+    <h2 id="emptyTitle" class="emptyTitle">결과를 찾을 수 없어요</h2>
+    <p class="emptyBody" id="emptyBody">주소를 다시 확인해 주세요.</p>
+    <div class="emptyActions">
+      <button class="button buttonPrimary" id="retryButton" type="button">다시 시도</button>
+      <a class="button buttonQuiet" href="/">키오스크로 가기</a>
+    </div>
+    <p class="emptyGuide">전시장 키오스크 화면에 세션 코드가 다시 표시됩니다. 코드를 확인한 뒤 QR을 다시 찍어주세요.</p>
+  </section>
+
+  <!-- 목업 주문 -->
+  <section class="card orderCard" id="orderCard" aria-labelledby="orderTitle">
+    <div class="orderHead">
+      <span class="badge badgeOutline">MOCK ORDER</span>
+      <h2 id="orderTitle">굿즈로 만들어 보기</h2>
+      <p class="orderLead">내 패턴이 얹힌 상품을 미리 담아둡니다. 전시 데모용 기록이라 결제·제작·배송은 진행되지 않습니다.</p>
+    </div>
+    <form class="orderForm" id="orderForm" novalidate>
+      <label class="field">
+        <span class="fieldLabel">이름 또는 닉네임</span>
+        <input id="visitorName" name="visitorName" type="text" maxlength="40" autocomplete="name" placeholder="비세토스" required>
+      </label>
+      <label class="field">
+        <span class="fieldLabel">연락처</span>
+        <input id="contact" name="contact" type="text" maxlength="80" autocomplete="email" inputmode="email" placeholder="email@example.com 또는 010-0000-0000" required>
+      </label>
+      <label class="field">
+        <span class="fieldLabel">상품 옵션</span>
+        <select id="productOption" name="productOption" required>
+          <option value="classic-tote">클래식 토트백</option>
+          <option value="mini-tote">미니 토트백</option>
+          <option value="flat-pouch">플랫 파우치</option>
+        </select>
+      </label>
+      <label class="consentRow">
+        <input id="consent" name="consent" type="checkbox" required>
+        <span>목업 주문 기록 저장에 동의합니다. 실제 결제나 배송 요청이 아님을 확인했습니다.</span>
+      </label>
+      <button class="button buttonPrimary buttonBlock" id="submitButton" type="submit">목업 주문 남기기</button>
+      <p class="formStatus" id="formStatus" role="status" aria-live="polite"></p>
+    </form>
+    <div class="orderDone" id="orderDone" hidden>
+      <p class="orderDoneMark" aria-hidden="true">✓</p>
+      <h3>목업 주문이 접수되었습니다</h3>
+      <p class="orderDoneBody">실제 결제나 배송은 진행되지 않습니다. 전시 종료 후 기록은 폐기됩니다.</p>
+      <p class="orderDoneId">주문 번호 <b class="mono" id="orderIdValue">—</b></p>
+      <button class="button buttonQuiet" id="orderAgainButton" type="button">다시 작성하기</button>
+    </div>
+  </section>
+
+  <footer class="pageFoot">
+    <p>리빙 비세토스 · 전시 데모</p>
+  </footer>
 </main>
 <script type="module" src="/src/result/main.ts"></script>
 </body>
