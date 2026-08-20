@@ -62,6 +62,7 @@ type PublicResultDetail = {
   code: string;
   patternName: string;
   issuedAt: string;
+  tileMeta: unknown;
   posterUrl: string | null;
   videoUrl: string | null;
   assetUrlExpiresAt: string;
@@ -463,6 +464,7 @@ async function toPublicDetail(record: ResultRecord): Promise<PublicResultDetail>
     code: record.code,
     patternName: record.pattern_name,
     issuedAt: record.issued_at,
+    tileMeta: record.tile_meta,
     posterUrl,
     videoUrl,
     assetUrlExpiresAt: expiresAt,
