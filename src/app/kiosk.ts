@@ -10,7 +10,7 @@
  * 그려선 안 된다. await 앞에서 에포크를 찍고, 뒤에서 달라졌으면 조용히 버린다.
  */
 import type { KioskState } from '../contracts.ts';
-import type { KioskView } from './kiosk-view.ts';
+import type { KioskScreen } from './kiosk-view.ts';
 import { OWN_RESULT_VIEW_MS, STATE_TIMEOUTS, type StateMachine } from './state.ts';
 
 /** 이름을 짓지 않고 떠난 관객의 기본값 (기존 하드코딩 값을 폴백으로 강등). */
@@ -52,7 +52,7 @@ const BADGE_TICK_MS = 500;
 
 export interface KioskFlowOptions {
   machine: StateMachine;
-  view: KioskView;
+  view: KioskScreen;
   steps: KioskSteps;
   /** ?debug=1 — 자동 진행과 타임아웃을 끄고 버튼이 여정을 직접 민다. */
   debug: boolean;
@@ -60,7 +60,7 @@ export interface KioskFlowOptions {
 
 export class KioskFlow {
   private readonly machine: StateMachine;
-  private readonly view: KioskView;
+  private readonly view: KioskScreen;
   private readonly steps: KioskSteps;
   private readonly debug: boolean;
 
