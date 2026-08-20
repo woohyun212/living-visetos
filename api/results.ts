@@ -21,9 +21,15 @@ const RESULT_UPLOAD_MAX_POSTER_BYTES = parsePositiveInteger(
 const VIDEO_MIME_TYPES = new Set(['video/mp4', 'video/webm']);
 const POSTER_MIME_TYPES = new Set(['image/png', 'image/jpeg']);
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
-const UPLOAD_RATE_LIMIT = 10;
-const PUBLIC_RESULT_RATE_LIMIT = 60;
-const ADMIN_RATE_LIMIT = 60;
+/*
+ * 전시장은 단일 NAT 라 관객 폰이 전부 같은 IP 로 보인다. 그래서 버킷을 넷으로 나눈다:
+ * 업로드(키오스크) · 공개 조회(관객 폰) · 미인증(토큰 없는/틀린 운영 경로 요청) · 운영(인증 성공).
+ * 운영 버킷만 IP 가 아니라 제시된 토큰으로 키를 잡아 관객 트래픽과 완전히 분리한다.
+ */
+const UPLOAD_RATE_LIMIT = parsePositiveInteger(env.RESULT_UPLOAD_RATE_LIMIT, 10);
+const PUBLIC_RESULT_RATE_LIMIT = parsePositiveInteger(env.RESULT_PUBLIC_RATE_LIMIT, 240);
+const UNAUTH_RATE_LIMIT = parsePositiveInteger(env.RESULT_UNAUTH_RATE_LIMIT, 30);
+const ADMIN_RATE_LIMIT = parsePositiveInteger(env.RESULT_ADMIN_RATE_LIMIT, 120);
 const rateBuckets = new Map<string, { count: number; resetAt: number }>();
 
 type ResultRecord = {
@@ -78,6 +84,20 @@ export const config = {
   runtime: 'nodejs',
 };
 
+/*
+ * Vercel Node 런타임의 Web Handler 규약(메서드별 named export).
+ * https://vercel.com/docs/functions/functions-api-reference#function-signature
+ * 아래 default export 는 Vite 로컬 미들웨어(Web Request 1-인자 호출)와
+ * Vercel Node `(req, res)` 호출을 함께 받는 호환 진입점이라 함께 유지한다.
+ */
+export function GET(request: Request): Promise<Response> {
+  return handleRequest(request);
+}
+
+export function POST(request: Request): Promise<Response> {
+  return handleRequest(request);
+}
+
 export default async function handler(
   request: Request | NodeApiRequest,
   response?: NodeApiResponse,
@@ -102,19 +122,18 @@ async function handleRequest(request: Request): Promise<Response> {
     return json({ error: 'Method not allowed.' }, 405, { Allow: 'GET, POST' });
   }
 
-  const uploadRateFailure = rateLimit(request, 'upload', UPLOAD_RATE_LIMIT);
+  const uploadRateFailure = rateLimit(addressRateKey(request, 'upload'), UPLOAD_RATE_LIMIT);
   if (uploadRateFailure) {
     return uploadRateFailure;
   }
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !RESULT_PUBLIC_BASE_URL) {
-    return json({ error: 'Result storage is not configured.' }, 503);
+    return json({ error: 'Result storage is not configured.' }, 503, noStoreHeaders());
   }
 
   try {
     const form = await request.formData();
     const sessionId = requireText(form, 'sessionId');
-    const code = requireText(form, 'code');
     const certificate = parseCertificate(requireText(form, 'certificate'));
     const video = requireFile(form, 'video', VIDEO_MIME_TYPES, RESULT_UPLOAD_MAX_VIDEO_BYTES);
     const posterImage = requireFile(
@@ -123,10 +142,7 @@ async function handleRequest(request: Request): Promise<Response> {
       POSTER_MIME_TYPES,
       RESULT_UPLOAD_MAX_POSTER_BYTES,
     );
-    const safeCode = normalizeResultCode(code);
-    if (!safeCode) {
-      return json({ error: 'Missing result code.' }, 400);
-    }
+    const safeCode = await resolveResultCode(optionalText(form, 'code'));
     const videoPath = `${safeCode}/clip.${extensionFor(video, 'webm')}`;
     const posterPath = `${safeCode}/poster.${extensionFor(posterImage, 'png')}`;
 
@@ -142,10 +158,59 @@ async function handleRequest(request: Request): Promise<Response> {
       poster_path: posterPath,
     });
 
-    return json({ url: `${RESULT_PUBLIC_BASE_URL.replace(/\/$/, '')}/results/${safeCode}` }, 201);
+    return json({
+      url: `${RESULT_PUBLIC_BASE_URL.replace(/\/$/, '')}/results/${safeCode}`,
+      code: safeCode,
+    }, 201, noStoreHeaders());
   } catch (error) {
-    return errorResponse(error, 'Result upload failed.', 400);
+    return errorResponse(error, 'Result upload failed.', 400, noStoreHeaders(), false);
   }
+}
+
+/*
+ * 무인증 POST 라 클라이언트가 코드를 고르면 남의 결과를 덮어쓸 수 있다(PR#5 P2).
+ * 코드가 오면 존재 여부를 먼저 확인해 409 로 막고, 아예 없으면 서버가 발급한다.
+ * recorder.ts 의 deliver() 는 응답의 url 만 읽으므로 기존 클라이언트는 그대로 동작한다.
+ */
+async function resolveResultCode(rawCode: string | null): Promise<string> {
+  if (rawCode === null) {
+    return issueResultCode();
+  }
+
+  const safeCode = normalizeResultCode(rawCode);
+  if (!safeCode) {
+    throw new HttpError('Missing result code.', 400);
+  }
+
+  if (await resultCodeExists(safeCode)) {
+    throw new HttpError('Result code already exists.', 409);
+  }
+
+  return safeCode;
+}
+
+async function issueResultCode(): Promise<string> {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const candidate = randomResultCode();
+    if (!(await resultCodeExists(candidate))) {
+      return candidate;
+    }
+  }
+
+  throw new HttpError('Could not issue a unique result code.', 503);
+}
+
+/** recorder.ts 의 createSessionCode() 와 같은 XXXX-XXXX 모양을 유지한다. */
+function randomResultCode(): string {
+  const bytes = new Uint8Array(8);
+  globalThis.crypto.getRandomValues(bytes);
+  const value = Array.from(bytes, (byte) => (byte % 36).toString(36).toUpperCase()).join('');
+  return value.replace(/(.{4})(?=.)/g, '$1-');
+}
+
+async function resultCodeExists(code: string): Promise<boolean> {
+  const records = await selectResultRecords({ code, limit: 1, offset: 0 });
+  return records.length > 0;
 }
 
 async function handleGet(request: Request): Promise<Response> {
@@ -154,7 +219,7 @@ async function handleGet(request: Request): Promise<Response> {
   const hasAuthorization = request.headers.has('authorization');
 
   if (code !== null && !hasAuthorization) {
-    const publicRateFailure = rateLimit(request, 'public-result', PUBLIC_RESULT_RATE_LIMIT);
+    const publicRateFailure = rateLimit(addressRateKey(request, 'public-result'), PUBLIC_RESULT_RATE_LIMIT);
     if (publicRateFailure) {
       return publicRateFailure;
     }
@@ -166,22 +231,27 @@ async function handleGet(request: Request): Promise<Response> {
     try {
       return await handlePublicDetail(code);
     } catch (error) {
-      return errorResponse(error, 'Result lookup failed.', 400, noStoreHeaders());
+      return errorResponse(error, 'Result lookup failed.', 400, noStoreHeaders(), false);
     }
   }
 
-  const adminRateFailure = rateLimit(request, 'admin-results', ADMIN_RATE_LIMIT);
+  /*
+   * 인증 검사를 rate limit 보다 먼저 돌린다. 예전 순서(운영 버킷 → 인증)에서는
+   * 토큰 없는 GET 이 운영 버킷을 소모해 관객 트래픽만으로 운영자가 429 로 잠겼다.
+   */
+  const guard = adminGuard(request);
+  if (!guard.ok) {
+    const unauthFailure = rateLimit(addressRateKey(request, 'unauth-results'), UNAUTH_RATE_LIMIT);
+    return unauthFailure ?? guard.response;
+  }
+
+  const adminRateFailure = rateLimit(adminRateKey(guard.token), ADMIN_RATE_LIMIT);
   if (adminRateFailure) {
     return adminRateFailure;
   }
 
-  const authFailure = authorizeAdminRequest(request);
-  if (authFailure) {
-    return authFailure;
-  }
-
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    return json({ error: 'Result storage is not configured.' }, 503);
+    return json({ error: 'Result storage is not configured.' }, 503, noStoreHeaders());
   }
 
   try {
@@ -191,7 +261,7 @@ async function handleGet(request: Request): Promise<Response> {
 
     return await handleList(url.searchParams);
   } catch (error) {
-    return errorResponse(error, 'Result lookup failed.', 400, noStoreHeaders());
+    return errorResponse(error, 'Result lookup failed.', 400, noStoreHeaders(), true);
   }
 }
 
@@ -280,21 +350,42 @@ async function sendNodeResponse(response: NodeApiResponse, webResponse: Response
   response.end(await webResponse.text());
 }
 
-function authorizeAdminRequest(request: Request): Response | null {
+type AdminGuard =
+  | { ok: true; token: string }
+  | { ok: false; response: Response };
+
+function adminGuard(request: Request): AdminGuard {
   if (!RESULT_ADMIN_TOKEN) {
-    return json({ error: 'Admin result access is not configured.' }, 503, noStoreHeaders());
+    return {
+      ok: false,
+      response: json({ error: 'Admin result access is not configured.' }, 503, noStoreHeaders()),
+    };
   }
 
   const header = request.headers.get('authorization') ?? '';
-  const token = header.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
-  if (token !== RESULT_ADMIN_TOKEN) {
-    return json({ error: 'Admin authorization is required.' }, 401, {
-      ...noStoreHeaders(),
-      'WWW-Authenticate': 'Bearer realm="living-visetos-results"',
-    });
+  const token = header.match(/^Bearer\s+(.+)$/i)?.[1]?.trim() ?? '';
+  if (!timingSafeEqual(token, RESULT_ADMIN_TOKEN)) {
+    return {
+      ok: false,
+      response: json({ error: 'Admin authorization is required.' }, 401, {
+        ...noStoreHeaders(),
+        'WWW-Authenticate': 'Bearer realm="living-visetos-results"',
+      }),
+    };
   }
 
-  return null;
+  return { ok: true, token };
+}
+
+/** 토큰 비교에서 일치 길이가 응답 시간으로 새지 않게 한다. */
+function timingSafeEqual(left: string, right: string): boolean {
+  let diff = left.length ^ right.length;
+  const length = Math.max(left.length, right.length);
+  for (let index = 0; index < length; index += 1) {
+    diff |= (left.charCodeAt(index) || 0) ^ (right.charCodeAt(index) || 0);
+  }
+
+  return diff === 0;
 }
 
 async function selectResultRecords(options: {
@@ -323,7 +414,7 @@ async function selectResultRecords(options: {
   });
 
   if (!response.ok) {
-    throw new HttpError(await upstreamErrorMessage(response, 'Result record lookup failed.'), 502);
+    throw await upstreamFailure(response, 'Result record lookup failed.', 502);
   }
 
   const body: unknown = await response.json();
@@ -398,7 +489,7 @@ async function signStorageObject(path: string): Promise<string | null> {
   );
 
   if (!response.ok) {
-    throw new HttpError(await upstreamErrorMessage(response, 'Storage signed URL failed.'), 502);
+    throw await upstreamFailure(response, 'Storage signed URL failed.', 502);
   }
 
   const body: unknown = await response.json();
@@ -429,6 +520,15 @@ function storageSignedUrl(signedUrl: string, supabaseUrl: string): string {
   }
 
   return new URL(path, supabaseUrl).toString();
+}
+
+function optionalText(form: FormData, name: string): string | null {
+  const value = form.get(name);
+  if (typeof value !== 'string' || value.trim() === '') {
+    return null;
+  }
+
+  return value;
 }
 
 function requireText(form: FormData, name: string): string {
@@ -492,7 +592,12 @@ async function uploadToStorage(path: string, file: File): Promise<void> {
   );
 
   if (!response.ok) {
-    throw new HttpError(await upstreamErrorMessage(response, 'Storage upload failed.'), 502);
+    // Storage 는 x-upsert 없이 POST 하면 중복 object 를 409 로 거절한다 — 덮어쓰기 차단 지점.
+    throw await upstreamFailure(
+      response,
+      response.status === 409 ? 'Result code already exists.' : 'Storage upload failed.',
+      response.status === 409 ? 409 : 502,
+    );
   }
 }
 
@@ -509,7 +614,12 @@ async function insertResultRecord(record: ResultRecord): Promise<void> {
   });
 
   if (!response.ok) {
-    throw new HttpError(await upstreamErrorMessage(response, 'Result record insert failed.'), 502);
+    // code unique 제약 위반도 덮어쓰기 시도다 — 사전 확인과 실제 insert 사이의 경합을 닫는다.
+    throw await upstreamFailure(
+      response,
+      response.status === 409 ? 'Result code already exists.' : 'Result record insert failed.',
+      response.status === 409 ? 409 : 502,
+    );
   }
 }
 
@@ -519,16 +629,25 @@ function supabaseAuthHeaders(serviceKey: string): Record<string, string> {
     : { authorization: `Bearer ${serviceKey}` };
 }
 
-async function upstreamErrorMessage(response: Response, fallback: string): Promise<string> {
+/*
+ * Supabase 응답 본문은 테이블/컬럼/제약 이름을 그대로 흘린다. 무인증 경로에는
+ * 절대 실어 보내지 않고 detail 로만 분리해 서버 로그에 남긴다(PR#5 P2).
+ */
+async function upstreamFailure(
+  response: Response,
+  message: string,
+  status: number,
+): Promise<HttpError> {
   const body = await response.text().catch(() => '');
   const compactBody = body.replace(/\s+/g, ' ').trim().slice(0, 500);
-  return compactBody
-    ? `${fallback} Supabase ${response.status}: ${compactBody}`
-    : `${fallback} Supabase ${response.status}.`;
+  const detail = compactBody
+    ? `Supabase ${response.status}: ${compactBody}`
+    : `Supabase ${response.status}.`;
+  return new HttpError(message, status, detail);
 }
 
 class HttpError extends Error {
-  constructor(message: string, readonly status: number) {
+  constructor(message: string, readonly status: number, readonly detail?: string) {
     super(message);
   }
 }
@@ -538,9 +657,17 @@ function errorResponse(
   fallback: string,
   fallbackStatus: number,
   headers: Record<string, string> = {},
+  exposeDetail = false,
 ): Response {
   if (error instanceof HttpError) {
-    return json({ error: error.message }, error.status, headers);
+    if (error.detail) {
+      console.error('[api/results]', error.message, error.detail);
+    }
+
+    const message = exposeDetail && error.detail
+      ? `${error.message} ${error.detail}`
+      : error.message;
+    return json({ error: message }, error.status, headers);
   }
 
   const message = error instanceof Error ? error.message : fallback;
@@ -551,9 +678,8 @@ function noStoreHeaders(): Record<string, string> {
   return { 'Cache-Control': 'no-store' };
 }
 
-function rateLimit(request: Request, scope: string, limit: number): Response | null {
+function rateLimit(key: string, limit: number): Response | null {
   const now = Date.now();
-  const key = `${scope}:${clientAddressFor(request)}`;
   const current = rateBuckets.get(key);
 
   if (!current || current.resetAt <= now) {
@@ -570,6 +696,25 @@ function rateLimit(request: Request, scope: string, limit: number): Response | n
     ...noStoreHeaders(),
     'Retry-After': String(Math.ceil((current.resetAt - now) / 1000)),
   });
+}
+
+function addressRateKey(request: Request, scope: string): string {
+  return `${scope}:${clientAddressFor(request)}`;
+}
+
+/** 운영 버킷은 IP 가 아니라 토큰으로 잡는다 — 관객과 같은 NAT 를 써도 분리된다. */
+function adminRateKey(token: string): string {
+  return `admin:${bucketFingerprint(token)}`;
+}
+
+function bucketFingerprint(value: string): string {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+
+  return hash.toString(36);
 }
 
 function clientAddressFor(request: Request): string {

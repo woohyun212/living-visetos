@@ -72,7 +72,7 @@ export const SESSION_BUDGET_ITEMS: readonly { label: string; ms: number }[] = [
 export const sessionBudgetTotalMs = (): number =>
   SESSION_BUDGET_ITEMS.reduce((sum, item) => sum + item.ms, 0);
 
-export type TransitionReason = 'init' | 'event' | 'timeout';
+export type TransitionReason = 'init' | 'event' | 'timeout' | 'operator';
 export type StateListener = (next: KioskState, prev: KioskState, reason: TransitionReason) => void;
 
 export class StateMachine {
@@ -103,11 +103,32 @@ export class StateMachine {
       console.warn(`[state] 허용되지 않은 전이: ${this.current} → ${next}`);
       return false;
     }
+    this.commit(next, reason);
+    return true;
+  }
+
+  /**
+   * 전이 표를 건너뛰는 **운영자 전용** 탈출구 (ARCHITECTURE §9 '전체 장애' 행의 손잡이).
+   *
+   * 강제 RESET 은 어느 상태에서든 걸려야 하는데 TRANSITIONS 에는 OWN→RESET 간선밖에 없다.
+   * 그렇다고 표에 간선을 더하면 §4 다이어그램과 어긋난다 — 그래서 표는 그대로 두고
+   * 이 함수만 예외로 둔다. to() 와 같은 경로(commit)를 타므로 타이머 재장전과 리스너 통지,
+   * 즉 RESET 진입의 에포크 증가·세션 파기가 **똑같이** 일어난다.
+   *
+   * 여정 배선(kiosk.ts)의 자동 진행은 절대 이 함수를 쓰지 않는다. TRANSITIONS 가 유일한 출처다.
+   */
+  forceTo(next: KioskState, reason: TransitionReason = 'operator'): void {
+    if (!this.can(next)) {
+      console.info(`[state] 운영자 강제 전이: ${this.current} → ${next}`);
+    }
+    this.commit(next, reason);
+  }
+
+  private commit(next: KioskState, reason: TransitionReason): void {
     const prev = this.current;
     this.current = next;
     this.armTimeout();
     this.listeners.forEach((fn) => fn(next, prev, reason));
-    return true;
   }
 
   onChange(fn: StateListener): () => void {

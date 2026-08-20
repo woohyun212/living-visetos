@@ -5,8 +5,13 @@ const SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY;
 const RESULT_ADMIN_TOKEN = env.RESULT_ADMIN_TOKEN;
 
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
-const ORDER_RATE_LIMIT = 12;
-const ADMIN_RATE_LIMIT = 60;
+/*
+ * results.ts 와 같은 버킷 원칙: 공개 주문 · 미인증 · 운영을 분리하고
+ * 운영 버킷만 토큰으로 키를 잡는다. 전시장 단일 NAT 에서 관객이 운영을 잠그면 안 된다.
+ */
+const ORDER_RATE_LIMIT = parsePositiveInteger(env.ORDER_RATE_LIMIT, 12);
+const UNAUTH_RATE_LIMIT = parsePositiveInteger(env.RESULT_UNAUTH_RATE_LIMIT, 30);
+const ADMIN_RATE_LIMIT = parsePositiveInteger(env.RESULT_ADMIN_RATE_LIMIT, 120);
 const MAX_NAME_LENGTH = 40;
 const MAX_CONTACT_LENGTH = 80;
 const MAX_PRODUCT_OPTION_LENGTH = 80;
@@ -50,6 +55,20 @@ export const config = {
   runtime: 'nodejs',
 };
 
+/*
+ * Vercel Node 런타임의 Web Handler 규약(메서드별 named export).
+ * https://vercel.com/docs/functions/functions-api-reference#function-signature
+ * 아래 default export 는 Vite 로컬 미들웨어(Web Request 1-인자 호출)와
+ * Vercel Node `(req, res)` 호출을 함께 받는 호환 진입점이라 함께 유지한다.
+ */
+export function GET(request: Request): Promise<Response> {
+  return handleRequest(request);
+}
+
+export function POST(request: Request): Promise<Response> {
+  return handleRequest(request);
+}
+
 export default async function handler(
   request: Request | NodeApiRequest,
   response?: NodeApiResponse,
@@ -78,7 +97,7 @@ async function handleRequest(request: Request): Promise<Response> {
 }
 
 async function handlePost(request: Request): Promise<Response> {
-  const orderRateFailure = rateLimit(request, 'order', ORDER_RATE_LIMIT);
+  const orderRateFailure = rateLimit(addressRateKey(request, 'public-order'), ORDER_RATE_LIMIT);
   if (orderRateFailure) {
     return orderRateFailure;
   }
@@ -93,19 +112,24 @@ async function handlePost(request: Request): Promise<Response> {
     const inserted = await insertOrderRecord(record);
     return json({ orderId: inserted.id }, 201, noStoreHeaders());
   } catch (error) {
-    return errorResponse(error, 'Order submission failed.', 400, noStoreHeaders());
+    return errorResponse(error, 'Order submission failed.', 400, noStoreHeaders(), false);
   }
 }
 
 async function handleGet(request: Request): Promise<Response> {
-  const adminRateFailure = rateLimit(request, 'admin-orders', ADMIN_RATE_LIMIT);
-  if (adminRateFailure) {
-    return adminRateFailure;
+  /*
+   * 인증 검사가 먼저다. 예전 순서에서는 토큰 없는 GET 이 운영 버킷을 소모해
+   * 관객/스캐너 트래픽만으로 운영자가 429 로 잠길 수 있었다(PR#5 P1-2).
+   */
+  const guard = adminGuard(request);
+  if (!guard.ok) {
+    const unauthFailure = rateLimit(addressRateKey(request, 'unauth-orders'), UNAUTH_RATE_LIMIT);
+    return unauthFailure ?? guard.response;
   }
 
-  const authFailure = authorizeAdminRequest(request);
-  if (authFailure) {
-    return authFailure;
+  const adminRateFailure = rateLimit(adminRateKey(guard.token), ADMIN_RATE_LIMIT);
+  if (adminRateFailure) {
+    return adminRateFailure;
   }
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
@@ -124,7 +148,7 @@ async function handleGet(request: Request): Promise<Response> {
     const records = await selectOrderRecords({ code: safeCode, limit });
     return json({ orders: records.map(toOrderSummary) }, 200, noStoreHeaders());
   } catch (error) {
-    return errorResponse(error, 'Order lookup failed.', 400, noStoreHeaders());
+    return errorResponse(error, 'Order lookup failed.', 400, noStoreHeaders(), true);
   }
 }
 
@@ -207,7 +231,7 @@ async function insertOrderRecord(record: Omit<OrderRecord, 'id'>): Promise<Order
   });
 
   if (!response.ok) {
-    throw new HttpError(await upstreamErrorMessage(response, 'Order record insert failed.'), 502);
+    throw await upstreamFailure(response, 'Order record insert failed.', 502);
   }
 
   const body: unknown = await response.json();
@@ -239,7 +263,7 @@ async function selectOrderRecords(options: { code: string | null; limit: number 
   });
 
   if (!response.ok) {
-    throw new HttpError(await upstreamErrorMessage(response, 'Order record lookup failed.'), 502);
+    throw await upstreamFailure(response, 'Order record lookup failed.', 502);
   }
 
   const body: unknown = await response.json();
@@ -262,21 +286,42 @@ function toOrderSummary(record: OrderRecord): OrderSummary {
   };
 }
 
-function authorizeAdminRequest(request: Request): Response | null {
+type AdminGuard =
+  | { ok: true; token: string }
+  | { ok: false; response: Response };
+
+function adminGuard(request: Request): AdminGuard {
   if (!RESULT_ADMIN_TOKEN) {
-    return json({ error: 'Admin order access is not configured.' }, 503, noStoreHeaders());
+    return {
+      ok: false,
+      response: json({ error: 'Admin order access is not configured.' }, 503, noStoreHeaders()),
+    };
   }
 
   const header = request.headers.get('authorization') ?? '';
-  const token = header.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
-  if (token !== RESULT_ADMIN_TOKEN) {
-    return json({ error: 'Admin authorization is required.' }, 401, {
-      ...noStoreHeaders(),
-      'WWW-Authenticate': 'Bearer realm="living-visetos-orders"',
-    });
+  const token = header.match(/^Bearer\s+(.+)$/i)?.[1]?.trim() ?? '';
+  if (!timingSafeEqual(token, RESULT_ADMIN_TOKEN)) {
+    return {
+      ok: false,
+      response: json({ error: 'Admin authorization is required.' }, 401, {
+        ...noStoreHeaders(),
+        'WWW-Authenticate': 'Bearer realm="living-visetos-orders"',
+      }),
+    };
   }
 
-  return null;
+  return { ok: true, token };
+}
+
+/** 토큰 비교에서 일치 길이가 응답 시간으로 새지 않게 한다. */
+function timingSafeEqual(left: string, right: string): boolean {
+  let diff = left.length ^ right.length;
+  const length = Math.max(left.length, right.length);
+  for (let index = 0; index < length; index += 1) {
+    diff |= (left.charCodeAt(index) || 0) ^ (right.charCodeAt(index) || 0);
+  }
+
+  return diff === 0;
 }
 
 function isValidContact(value: string): boolean {
@@ -329,16 +374,25 @@ function supabaseAuthHeaders(serviceKey: string): Record<string, string> {
     : { authorization: `Bearer ${serviceKey}` };
 }
 
-async function upstreamErrorMessage(response: Response, fallback: string): Promise<string> {
+/*
+ * Supabase 응답 본문은 테이블/컬럼/제약 이름을 그대로 흘린다. 무인증 경로에는
+ * 절대 실어 보내지 않고 detail 로만 분리해 서버 로그에 남긴다(PR#5 P2).
+ */
+async function upstreamFailure(
+  response: Response,
+  message: string,
+  status: number,
+): Promise<HttpError> {
   const body = await response.text().catch(() => '');
   const compactBody = body.replace(/\s+/g, ' ').trim().slice(0, 500);
-  return compactBody
-    ? `${fallback} Supabase ${response.status}: ${compactBody}`
-    : `${fallback} Supabase ${response.status}.`;
+  const detail = compactBody
+    ? `Supabase ${response.status}: ${compactBody}`
+    : `Supabase ${response.status}.`;
+  return new HttpError(message, status, detail);
 }
 
 class HttpError extends Error {
-  constructor(message: string, readonly status: number) {
+  constructor(message: string, readonly status: number, readonly detail?: string) {
     super(message);
   }
 }
@@ -348,9 +402,17 @@ function errorResponse(
   fallback: string,
   fallbackStatus: number,
   headers: Record<string, string> = {},
+  exposeDetail = false,
 ): Response {
   if (error instanceof HttpError) {
-    return json({ error: error.message }, error.status, headers);
+    if (error.detail) {
+      console.error('[api/orders]', error.message, error.detail);
+    }
+
+    const message = exposeDetail && error.detail
+      ? `${error.message} ${error.detail}`
+      : error.message;
+    return json({ error: message }, error.status, headers);
   }
 
   const message = error instanceof Error ? error.message : fallback;
@@ -361,9 +423,8 @@ function noStoreHeaders(): Record<string, string> {
   return { 'Cache-Control': 'no-store' };
 }
 
-function rateLimit(request: Request, scope: string, limit: number): Response | null {
+function rateLimit(key: string, limit: number): Response | null {
   const now = Date.now();
-  const key = `${scope}:${clientAddressFor(request)}`;
   const current = rateBuckets.get(key);
 
   if (!current || current.resetAt <= now) {
@@ -380,6 +441,25 @@ function rateLimit(request: Request, scope: string, limit: number): Response | n
     ...noStoreHeaders(),
     'Retry-After': String(Math.ceil((current.resetAt - now) / 1000)),
   });
+}
+
+function addressRateKey(request: Request, scope: string): string {
+  return `${scope}:${clientAddressFor(request)}`;
+}
+
+/** 운영 버킷은 IP 가 아니라 토큰으로 잡는다 — 관객과 같은 NAT 를 써도 분리된다. */
+function adminRateKey(token: string): string {
+  return `admin:${bucketFingerprint(token)}`;
+}
+
+function bucketFingerprint(value: string): string {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+
+  return hash.toString(36);
 }
 
 function clientAddressFor(request: Request): string {
@@ -416,6 +496,11 @@ function normalizeSupabaseUrl(value: string, scope: string): string {
 
 function normalizeResultCode(value: string): string {
   return value.replace(/[^A-Z0-9-]/gi, '').toUpperCase();
+}
+
+function parsePositiveInteger(value: string | undefined, fallback: number): number {
+  const parsed = value === undefined ? fallback : Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 function clampInteger(value: string | null, fallback: number, min: number, max: number): number {

@@ -135,6 +135,34 @@ export class KioskFlow {
     }
   }
 
+  /**
+   * 운영자 데모 모드 — 목 카메라가 켜진 뒤 여정을 CREATE 부터 다시 민다.
+   * (ARCHITECTURE §9 폴백 매트릭스 '카메라 실패' 행: "운영자 안내 후 시연 계속")
+   *
+   * ERROR_RECOVER 는 5초 뒤 ATTRACT 로 넘어간다. 운영자가 그 5초를 놓쳐도 되도록
+   * ATTRACT 에서도 받는다 — 둘 다 "아직 세션이 시작되지 않은" 화면이라 같은 뜻이다.
+   * 체험 도중(CREATE~OWN)이라면 아무것도 하지 않는다. 관객의 진행을 가로채지 않기 위해서다.
+   *
+   * @returns 여정을 실제로 다시 밀었는지
+   */
+  resumeInDemoMode(): boolean {
+    const here = this.machine.state;
+    if (here !== 'ERROR_RECOVER' && here !== 'ATTRACT') return false;
+    return this.advanceTo('CREATE');
+  }
+
+  /**
+   * 운영자 강제 RESET — 어떤 상태에서든 세션을 파기한다.
+   *
+   * ATTRACT 로 바로 뛰지 않고 반드시 RESET 을 통과시킨다. RESET 진입이 에포크를 올려
+   * 늦게 도착할 record/deliver 응답을 무효화하기 때문이다 — 건너뛰면 앞 관객의 QR 이
+   * 다음 사람 화면에 뜰 수 있다. ATTRACT 로는 RESET 의 2초 타임아웃이 알아서 데려간다.
+   */
+  forceReset(): void {
+    if (this.machine.state === 'RESET') return;
+    this.machine.forceTo('RESET');
+  }
+
   dispose(): void {
     clearInterval(this.badgeTimer);
   }

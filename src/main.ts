@@ -12,16 +12,18 @@
  */
 import { KioskFlow, type KioskStep, type KioskSteps } from './app/kiosk.ts';
 import { KioskView, type KioskScreen } from './app/kiosk-view.ts';
+import { installOperatorControls } from './app/ops.ts';
 import { StageView } from './app/stage.ts';
 import { StateMachine } from './app/state.ts';
 import type { DeliveryTicket, FeatureSeed, PatternTile } from './contracts.ts';
 import { drawQrCode, toScannableUrl, toShortUrlLabel } from './output/qr.ts';
-import { CLIP_SECONDS, deliver, record } from './output/recorder.ts';
+import { CLIP_SECONDS, deliver, record, startDeliveryRetry } from './output/recorder.ts';
 import { generateTile } from './pattern/l1.ts';
 import { acceptPromotedTile, promoteToL2 } from './pattern/l2.ts';
 import { BagLayer } from './render/bag.ts';
 import { OverlayLayer } from './render/overlay.ts';
 import { CaptureService } from './vision/capture.ts';
+import { installFailingCamera, installMockCamera } from './vision/mock-camera.ts';
 import { extractSeed } from './vision/seed.ts';
 import { Segmenter } from './vision/segmenter.ts';
 import './style.css';
@@ -30,6 +32,18 @@ const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) 
 
 const params = new URLSearchParams(location.search);
 const DEBUG_MODE = params.get('debug') === '1';
+
+/*
+ * 개발 전용 카메라 계기 — 첫 getUserMedia 보다 **먼저** 걸어 둔다.
+ *   ?mockCamera=1  카메라 없이 여정을 완주 (무인 검증)
+ *   ?failCamera=1  getUserMedia 가 항상 거절 → CREATE→ERROR_RECOVER 폴백 리허설(§9)
+ * 두 분기 모두 import.meta.env.DEV 가드 안이라 프로덕션 번들에서는 제거된다.
+ * (운영자 데모 모드 Shift+D 는 이 가드 밖 — app/ops.ts 가 같은 목 카메라를 프로덕션에서도 쓴다.)
+ */
+if (import.meta.env.DEV) {
+  if (params.get('failCamera') === '1') installFailingCamera();
+  else if (params.get('mockCamera') === '1') installMockCamera();
+}
 
 const video = $<HTMLVideoElement>('video');
 const tileCanvas = $<HTMLCanvasElement>('tileCanvas');
@@ -228,12 +242,20 @@ async function runDeliver(patternName: string): Promise<void> {
     setDelivery(`${CLIP_SECONDS}초 동안 실루엣 오버레이를 녹화하고 전송합니다.`, '처리 중');
     setStatus('결과 녹화/전송 중입니다. 잠시만 기다려주세요.');
 
-    const pkg = await record(overlayCanvas, {
-      sessionId: session.id,
-      patternName,
-      tileMeta: session.tile.meta,
-      seconds: CLIP_SECONDS,
-    });
+    // 녹화는 무대와 같은 그림을 1080×1920 세로로 합성한다(카메라 거울 + 실루엣 오버레이).
+    const pkg = await record(
+      {
+        video,
+        overlayCanvas,
+        subscribeOverlayFrame: (listener) => overlay.onFrameRendered(listener),
+      },
+      {
+        sessionId: session.id,
+        patternName,
+        tileMeta: session.tile.meta,
+        seconds: CLIP_SECONDS,
+      },
+    );
     const ticket = await deliver(pkg);
     session.deliveryTicket = ticket;
     renderContract();
@@ -262,6 +284,10 @@ async function runDeliver(patternName: string): Promise<void> {
  */
 function destroySession(): void {
   setOverlay(false);
+  // 오버레이는 stop() 만으로는 캔버스에 마지막 실루엣을 남긴다 — 루프가 segmenter 를
+  // 기다리는 사이 파기가 먼저 일어나기 때문이다. dispose() 가 텍스처·renderer 를 놓고
+  // 캔버스를 즉시 비운다. 다음 관객의 setTile()/start() 가 GPU 자원을 다시 세운다.
+  overlay.dispose();
   capture.stop();
   segmenter.dispose(); // 마스크 ImageBitmap close + 모델 해제
   bag?.dispose();
@@ -328,50 +354,75 @@ for (const [id, step] of BUTTON_STEPS) {
   $<HTMLButtonElement>(id).onclick = () => void flow.requestStep(step);
 }
 
+/*
+ * ADR-005 재시도 큐 소비 — 앱이 뜨는 순간·인터넷이 돌아오는 순간·60초마다 조용히 재전송한다.
+ * 성공해도 화면은 그대로다: 관객은 이미 세션 코드를 들고 갔고, 재전송은 그 코드 그대로 올라간다.
+ */
+startDeliveryRetry();
+
 document.body.classList.toggle('is-debug', DEBUG_MODE);
 $('status').textContent = DEBUG_MODE
   ? '디버그 모드(?debug=1) — 상태 오버레이·타임아웃 없이 버튼으로 진행합니다.'
   : '터치하여 시작하세요.';
 renderContract();
 
-/* 개발 전용 — 카메라 없이 여정을 돌려보기 위한 목 주입. 프로덕션 번들에서는 제거된다. */
+/*
+ * 운영자 단축키 — 무대 모드에서만 건다(§9 폴백 매트릭스). 화면에는 목록을 그리지 않는다.
+ * `stage` 가 있는 분기 안에 두었으므로 "무대 전용"이 조건문이 아니라 구조로 지켜진다.
+ */
+if (stage) {
+  installOperatorControls({
+    setDemoMode: (on) => stage.setDemoMode(on),
+    resumeInDemoMode: () => flow.resumeInDemoMode(),
+    forceReset: () => flow.forceReset(),
+    showFallback: () => stage.showFallback(),
+    hideFallback: () => stage.hideFallback(),
+  });
+} else {
+  installDebugLinks();
+}
+
+/**
+ * ?debug=1 계기판 전용 샛길 — F-07 드랍·F-08 멤버십·F-09 운영 대시보드로 가는 링크.
+ *
+ * index.html 이 아니라 여기서 만든다. 마크업에 두면 무대 모드에서도 DOM 에 존재하게 되고,
+ * stage.css 의 "계기판 숨김 목록"(.is-stage > ...)에 선택자를 더하는 걸 잊는 순간
+ * 관객 화면 위에 목업 링크가 뜬다. 디버그 분기 안에서 만들면 그 실수가 불가능해진다.
+ */
+function installDebugLinks(): void {
+  const nav = document.createElement('nav');
+  nav.className = 'debugLinks';
+  nav.id = 'debugLinks';
+  nav.setAttribute('aria-label', '개발·운영 화면 바로가기');
+
+  const links: readonly [string, string][] = [
+    ['/admin.html', 'F-09 운영 대시보드'],
+    ['/drop.html', 'F-07 한정판 드랍 (목업)'],
+    ['/membership.html', 'F-08 멤버십 시그니처 (컨셉)'],
+  ];
+  for (const [href, label] of links) {
+    const anchor = document.createElement('a');
+    anchor.href = href;
+    anchor.textContent = label;
+    nav.append(anchor);
+  }
+  $('status').after(nav);
+}
+
+/* 개발 전용 — 결과 카드를 카메라 없이 렌더해 보는 목 주입. 프로덕션 번들에서는 제거된다. */
 if (import.meta.env.DEV) {
+  /*
+   * 폴백 리허설용 손잡이. 브라우저 콘솔·자동화 스크립트가 여정과 오버레이를 직접 찔러
+   * "RESET 뒤 두 번째 세션에서도 오버레이가 다시 렌더되는가" 같은 것을 확인할 수 있게 한다.
+   * (docs/OPERATIONS.md §3)
+   */
+  Object.assign(globalThis, { __kiosk: { flow, machine, overlay, capture, segmenter } });
+
   const mockTicket = params.get('mockTicket');
   if (mockTicket === 'url') {
     void showResultCard({ kind: 'url', url: `${location.origin}/results/ABCD-EFGH` });
   } else if (mockTicket === 'code') {
     void showResultCard({ kind: 'code', code: 'ABCD-EFGH' });
   }
-  if (params.get('mockCamera') === '1') installMockCamera();
-}
 
-/** ?mockCamera=1 — getUserMedia 를 캔버스 스트림으로 바꿔치기한다 (무인 검증용). */
-function installMockCamera(): void {
-  const canvas = document.createElement('canvas');
-  canvas.width = 960;
-  canvas.height = 720;
-  const ctx = canvas.getContext('2d');
-  if (!ctx || typeof canvas.captureStream !== 'function') return;
-
-  let tick = 0;
-  const paint = (): void => {
-    tick += 1;
-    ctx.fillStyle = `hsl(${(tick * 2) % 360} 55% 52%)`;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = `hsl(${(tick * 5 + 140) % 360} 70% 42%)`;
-    ctx.beginPath();
-    ctx.arc(480 + Math.sin(tick / 9) * 170, 360 + Math.cos(tick / 12) * 90, 170, 0, Math.PI * 2);
-    ctx.fill();
-    requestAnimationFrame(paint);
-  };
-  paint();
-
-  const stream = canvas.captureStream(30);
-  const fake = { getUserMedia: async () => stream } as unknown as MediaDevices;
-  try {
-    Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: fake });
-  } catch {
-    navigator.mediaDevices.getUserMedia = fake.getUserMedia;
-  }
-  console.info('[mock] getUserMedia 를 캔버스 스트림으로 대체했습니다.');
 }

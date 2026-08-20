@@ -64,6 +64,13 @@ button:hover:not(:disabled){background:var(--red);border-color:var(--red);color:
   padding:12px;border-radius:6px;white-space:pre-wrap;margin-top:14px;max-width:1200px;line-height:1.5;
 }
 #status{font-size:12.5px;color:var(--red);font-weight:700;min-height:18px;margin-top:6px;}
+/* ?debug=1 계기판 전용 샛길 (main.ts installDebugLinks 가 만든다) — 무대에는 존재하지 않는다. */
+.debugLinks{display:flex;flex-wrap:wrap;gap:var(--ds-space-md);margin:var(--ds-space-lg) 0 0;}
+.debugLinks a{
+  padding:6px 14px;border:1px solid var(--line);border-radius:var(--ds-radius-pill);
+  background:#fff;color:#6b6154;font-size:12px;font-weight:700;text-decoration:none;
+}
+.debugLinks a:hover{border-color:var(--dark);color:var(--ink);}
 
 /* FeatureSeed 패널 (F-01) — DESIGN.md 토큰 적용 */
 .panel--seed{
