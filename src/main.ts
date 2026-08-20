@@ -164,10 +164,14 @@ async function runDeliver(): Promise<void> {
   }
 
   btn.disabled = true;
-  setDelivery(`${CLIP_SECONDS}초 동안 실루엣 오버레이를 녹화하고 전송합니다.`, '처리 중');
-  setStatus('결과 녹화/전송 중입니다. 잠시만 기다려주세요.');
+  setDelivery('첫 실루엣 프레임을 준비한 뒤 녹화를 시작합니다.', '처리 중');
+  setStatus('오버레이 첫 프레임을 준비하는 중입니다.');
 
   try {
+    await overlay.waitForFrame();
+    setDelivery(`${CLIP_SECONDS}초 동안 실루엣 오버레이를 녹화하고 전송합니다.`, '처리 중');
+    setStatus('결과 녹화/전송 중입니다. 잠시만 기다려주세요.');
+
     const pkg = await record(overlayCanvas, {
       sessionId: session.id,
       patternName: '나의 비세토스',

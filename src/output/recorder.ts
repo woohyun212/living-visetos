@@ -109,6 +109,7 @@ function uploadResultPackage(pkg: ResultPackage, code: string): Promise<string> 
 }
 
 async function enqueueForRetry(pkg: ResultPackage, code: string): Promise<void> {
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
   const entry: PendingResultEntry = {
     code,
     sessionId: pkg.sessionId,
@@ -119,17 +120,18 @@ async function enqueueForRetry(pkg: ResultPackage, code: string): Promise<void> 
     posterImageType: pkg.posterImage.type || null,
     status: 'pending-upload',
     createdAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    expiresAt,
   };
 
   try {
+    await pruneExpiredPendingResults();
     await putPendingResult(entry);
   } catch {
     // IndexedDB can be blocked in kiosk/private modes; keep a minimal debug breadcrumb.
   }
 
   try {
-    const entry = {
+    const queueEntry = {
       code,
       status: 'pending-upload',
       videoBytes: pkg.video.size,
@@ -137,11 +139,11 @@ async function enqueueForRetry(pkg: ResultPackage, code: string): Promise<void> 
       posterImageBytes: pkg.posterImage.size,
       posterImageType: pkg.posterImage.type || null,
       createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      expiresAt,
     };
     const storage = globalThis.localStorage;
     const queue = readDeliveryQueue(storage).filter((item) => !isExpired(item));
-    storage.setItem(DELIVERY_QUEUE_KEY, JSON.stringify([...queue, entry]));
+    storage.setItem(DELIVERY_QUEUE_KEY, JSON.stringify([...queue, queueEntry]));
   } catch {
     // Local-first delivery must survive private mode, quota, or blocked storage.
   }
@@ -179,6 +181,29 @@ async function putPendingResult(entry: PendingResultEntry): Promise<void> {
   try {
     const transaction = db.transaction(DELIVERY_STORE_NAME, 'readwrite');
     transaction.objectStore(DELIVERY_STORE_NAME).put(entry);
+    await transactionDone(transaction);
+  } finally {
+    db.close();
+  }
+}
+
+async function pruneExpiredPendingResults(): Promise<void> {
+  const db = await openDeliveryDb();
+  try {
+    const transaction = db.transaction(DELIVERY_STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(DELIVERY_STORE_NAME);
+    const request = store.openCursor();
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor) {
+        return;
+      }
+
+      if (isPendingResultEntry(cursor.value) && isExpired(cursor.value)) {
+        cursor.delete();
+      }
+      cursor.continue();
+    };
     await transactionDone(transaction);
   } finally {
     db.close();
@@ -329,6 +354,10 @@ function isDeliveryQueueEntry(value: unknown): value is DeliveryQueueEntry {
     'expiresAt' in value &&
     typeof value.expiresAt === 'string'
   );
+}
+
+function isPendingResultEntry(value: unknown): value is PendingResultEntry {
+  return isDeliveryQueueEntry(value) && 'video' in value && 'posterImage' in value;
 }
 
 function isExpired(entry: DeliveryQueueEntry): boolean {

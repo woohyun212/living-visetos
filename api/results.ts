@@ -22,6 +22,7 @@ const VIDEO_MIME_TYPES = new Set(['video/mp4', 'video/webm']);
 const POSTER_MIME_TYPES = new Set(['image/png', 'image/jpeg']);
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const UPLOAD_RATE_LIMIT = 10;
+const PUBLIC_RESULT_RATE_LIMIT = 60;
 const ADMIN_RATE_LIMIT = 60;
 const rateBuckets = new Map<string, { count: number; resetAt: number }>();
 
@@ -60,78 +61,104 @@ type PublicResultDetail = {
   assetUrlExpiresAt: string;
 };
 
+type NodeApiRequest = {
+  method?: string;
+  url?: string;
+  headers: Record<string, string | string[] | undefined>;
+  readable?: boolean;
+};
+
+type NodeApiResponse = {
+  statusCode: number;
+  setHeader(key: string, value: string): void;
+  end(body: string): void;
+};
+
 export const config = {
   runtime: 'nodejs',
 };
 
-export default {
-  async fetch(request: Request): Promise<Response> {
-    if (request.method === 'GET') {
-      return handleGet(request);
-    }
-
-    if (request.method !== 'POST') {
-      return json({ error: 'Method not allowed.' }, 405, { Allow: 'GET, POST' });
-    }
-
-    const uploadRateFailure = rateLimit(request, 'upload', UPLOAD_RATE_LIMIT);
-    if (uploadRateFailure) {
-      return uploadRateFailure;
-    }
-
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !RESULT_PUBLIC_BASE_URL) {
-      return json({ error: 'Result storage is not configured.' }, 503);
-    }
-
-    try {
-      const form = await request.formData();
-      const sessionId = requireText(form, 'sessionId');
-      const code = requireText(form, 'code');
-      const certificate = parseCertificate(requireText(form, 'certificate'));
-      const video = requireFile(form, 'video', VIDEO_MIME_TYPES, RESULT_UPLOAD_MAX_VIDEO_BYTES);
-      const posterImage = requireFile(
-        form,
-        'posterImage',
-        POSTER_MIME_TYPES,
-        RESULT_UPLOAD_MAX_POSTER_BYTES,
-      );
-      const safeCode = normalizeResultCode(code);
-      if (!safeCode) {
-        return json({ error: 'Missing result code.' }, 400);
-      }
-      const videoPath = `${safeCode}/clip.${extensionFor(video, 'webm')}`;
-      const posterPath = `${safeCode}/poster.${extensionFor(posterImage, 'png')}`;
-
-      await uploadToStorage(videoPath, video);
-      await uploadToStorage(posterPath, posterImage);
-      await insertResultRecord({
-        code: safeCode,
-        session_id: sessionId,
-        pattern_name: certificate.patternName,
-        issued_at: certificate.issuedAt,
-        tile_meta: certificate.tileMeta,
-        video_path: videoPath,
-        poster_path: posterPath,
-      });
-
-      return json({ url: `${RESULT_PUBLIC_BASE_URL.replace(/\/$/, '')}/results/${safeCode}` }, 201);
-    } catch (error) {
-      return errorResponse(error, 'Result upload failed.', 400);
-    }
-  },
-};
-
-async function handleGet(request: Request): Promise<Response> {
-  const adminRateFailure = rateLimit(request, 'admin', ADMIN_RATE_LIMIT);
-  if (adminRateFailure) {
-    return adminRateFailure;
+export default async function handler(
+  request: Request | NodeApiRequest,
+  response?: NodeApiResponse,
+): Promise<Response | undefined> {
+  if (request instanceof Request) {
+    return handleRequest(request);
   }
 
+  if (!response) {
+    throw new Error('Node response is required.');
+  }
+
+  await sendNodeResponse(response, await handleRequest(toWebRequest(request, '/api/results')));
+}
+
+async function handleRequest(request: Request): Promise<Response> {
+  if (request.method === 'GET') {
+    return handleGet(request);
+  }
+
+  if (request.method !== 'POST') {
+    return json({ error: 'Method not allowed.' }, 405, { Allow: 'GET, POST' });
+  }
+
+  const uploadRateFailure = rateLimit(request, 'upload', UPLOAD_RATE_LIMIT);
+  if (uploadRateFailure) {
+    return uploadRateFailure;
+  }
+
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !RESULT_PUBLIC_BASE_URL) {
+    return json({ error: 'Result storage is not configured.' }, 503);
+  }
+
+  try {
+    const form = await request.formData();
+    const sessionId = requireText(form, 'sessionId');
+    const code = requireText(form, 'code');
+    const certificate = parseCertificate(requireText(form, 'certificate'));
+    const video = requireFile(form, 'video', VIDEO_MIME_TYPES, RESULT_UPLOAD_MAX_VIDEO_BYTES);
+    const posterImage = requireFile(
+      form,
+      'posterImage',
+      POSTER_MIME_TYPES,
+      RESULT_UPLOAD_MAX_POSTER_BYTES,
+    );
+    const safeCode = normalizeResultCode(code);
+    if (!safeCode) {
+      return json({ error: 'Missing result code.' }, 400);
+    }
+    const videoPath = `${safeCode}/clip.${extensionFor(video, 'webm')}`;
+    const posterPath = `${safeCode}/poster.${extensionFor(posterImage, 'png')}`;
+
+    await uploadToStorage(videoPath, video);
+    await uploadToStorage(posterPath, posterImage);
+    await insertResultRecord({
+      code: safeCode,
+      session_id: sessionId,
+      pattern_name: certificate.patternName,
+      issued_at: certificate.issuedAt,
+      tile_meta: certificate.tileMeta,
+      video_path: videoPath,
+      poster_path: posterPath,
+    });
+
+    return json({ url: `${RESULT_PUBLIC_BASE_URL.replace(/\/$/, '')}/results/${safeCode}` }, 201);
+  } catch (error) {
+    return errorResponse(error, 'Result upload failed.', 400);
+  }
+}
+
+async function handleGet(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
   const hasAuthorization = request.headers.has('authorization');
 
   if (code !== null && !hasAuthorization) {
+    const publicRateFailure = rateLimit(request, 'public-result', PUBLIC_RESULT_RATE_LIMIT);
+    if (publicRateFailure) {
+      return publicRateFailure;
+    }
+
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       return json({ error: 'Result storage is not configured.' }, 503, noStoreHeaders());
     }
@@ -141,6 +168,11 @@ async function handleGet(request: Request): Promise<Response> {
     } catch (error) {
       return errorResponse(error, 'Result lookup failed.', 400, noStoreHeaders());
     }
+  }
+
+  const adminRateFailure = rateLimit(request, 'admin-results', ADMIN_RATE_LIMIT);
+  if (adminRateFailure) {
+    return adminRateFailure;
   }
 
   const authFailure = authorizeAdminRequest(request);
@@ -212,6 +244,40 @@ async function handleDetail(code: string): Promise<Response> {
 
 function json(body: unknown, status: number, headers: Record<string, string> = {}): Response {
   return Response.json(body, { status, headers });
+}
+
+function toWebRequest(request: NodeApiRequest, fallbackPath: string): Request {
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(request.headers)) {
+    if (Array.isArray(value)) {
+      headers.set(key, value.join(', '));
+    } else if (value !== undefined) {
+      headers.set(key, value);
+    }
+  }
+
+  const method = request.method ?? 'GET';
+  const host = headers.get('host') ?? 'localhost';
+  const protocol = headers.get('x-forwarded-proto') ?? 'https';
+  const url = new URL(request.url ?? fallbackPath, `${protocol}://${host}`).toString();
+  if (method === 'GET' || method === 'HEAD') {
+    return new Request(url, { headers, method });
+  }
+
+  return new Request(url, {
+    body: request.readable === false ? null : request as unknown as BodyInit,
+    duplex: 'half',
+    headers,
+    method,
+  } as RequestInit & { duplex: 'half' });
+}
+
+async function sendNodeResponse(response: NodeApiResponse, webResponse: Response): Promise<void> {
+  response.statusCode = webResponse.status;
+  webResponse.headers.forEach((value, key) => {
+    response.setHeader(key, value);
+  });
+  response.end(await webResponse.text());
 }
 
 function authorizeAdminRequest(request: Request): Response | null {
@@ -420,7 +486,6 @@ async function uploadToStorage(path: string, file: File): Promise<void> {
         ...supabaseAuthHeaders(serviceKey),
         apikey: serviceKey,
         'content-type': file.type || 'application/octet-stream',
-        'x-upsert': 'true',
       },
       body: file,
     },
@@ -439,7 +504,6 @@ async function insertResultRecord(record: ResultRecord): Promise<void> {
       ...supabaseAuthHeaders(serviceKey),
       apikey: serviceKey,
       'content-type': 'application/json',
-      prefer: 'resolution=merge-duplicates',
     },
     body: JSON.stringify(record),
   });

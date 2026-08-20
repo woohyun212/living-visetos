@@ -14,6 +14,8 @@ const PATTERN_SCALE = 0.35; // 실루엣 위 타일 반복 크기
 export class OverlayLayer {
   private running = false;
   private tile: PatternTile | null = null;
+  private renderedFrameCount = 0;
+  private readonly frameWaiters = new Set<() => void>();
 
   constructor(
     private readonly video: HTMLVideoElement,
@@ -35,6 +37,26 @@ export class OverlayLayer {
     void this.loop();
   }
 
+  waitForFrame(timeoutMs = 1500): Promise<void> {
+    const frameCount = this.renderedFrameCount;
+
+    return new Promise((resolve, reject) => {
+      const done = () => {
+        if (this.renderedFrameCount <= frameCount) {
+          return;
+        }
+        globalThis.clearTimeout(timeout);
+        this.frameWaiters.delete(done);
+        resolve();
+      };
+      const timeout = globalThis.setTimeout(() => {
+        this.frameWaiters.delete(done);
+        reject(new Error('Overlay first frame was not ready in time.'));
+      }, timeoutMs);
+      this.frameWaiters.add(done);
+    });
+  }
+
   stop(): void {
     this.running = false;
   }
@@ -50,7 +72,8 @@ export class OverlayLayer {
     const pat = document.createElement('canvas');
     pat.width = oc.width;
     pat.height = oc.height;
-    const px = pat.getContext('2d')!;
+    const px = pat.getContext('2d');
+    if (!px) throw new Error('2D 컨텍스트를 만들 수 없습니다');
 
     while (this.running) {
       await this.segmenter.send(this.video);
@@ -58,13 +81,18 @@ export class OverlayLayer {
       ox.clearRect(0, 0, oc.width, oc.height);
 
       if (mask && this.tile) {
+        const p = px.createPattern(this.tile.bitmap, 'repeat');
+        if (!p) {
+          await new Promise((r) => requestAnimationFrame(r));
+          continue;
+        }
+
         ox.save();
         ox.translate(oc.width, 0);
         ox.scale(-1, 1); // 거울 모드 정합
         ox.drawImage(mask, 0, 0, oc.width, oc.height); // ① 사람 마스크
         ox.globalCompositeOperation = 'source-in'; // ② 마스크 안에만
 
-        const p = px.createPattern(this.tile.bitmap, 'repeat')!;
         px.clearRect(0, 0, pat.width, pat.height);
         px.save();
         px.scale(PATTERN_SCALE, PATTERN_SCALE);
@@ -75,9 +103,18 @@ export class OverlayLayer {
         ox.drawImage(pat, 0, 0); // ③ 패턴 주입
         ox.restore();
         ox.globalCompositeOperation = 'source-over';
+        this.notifyFrameRendered();
       }
       await new Promise((r) => requestAnimationFrame(r));
     }
     ox.clearRect(0, 0, oc.width, oc.height);
+  }
+
+  private notifyFrameRendered(): void {
+    this.renderedFrameCount += 1;
+    for (const resolve of this.frameWaiters) {
+      resolve();
+    }
+    this.frameWaiters.clear();
   }
 }
