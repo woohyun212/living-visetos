@@ -1,7 +1,6 @@
 import './style.css';
 
 const PAGE_LIMIT = 20;
-const ADMIN_TOKEN_STORAGE_KEY = 'living-visetos:admin-token:v1';
 
 type ResultSummary = {
   code: string;
@@ -65,8 +64,6 @@ const nextButton = getElement<HTMLButtonElement>('nextButton');
 let offset = 0;
 let hasMore = false;
 let selectedCode = '';
-
-adminToken.value = sessionStorage.getItem(ADMIN_TOKEN_STORAGE_KEY) ?? '';
 
 function setStatus(message: string): void {
   statusBand.textContent = message;
@@ -340,20 +337,11 @@ codeSearch.addEventListener('keydown', (event) => {
     void loadDetail(codeSearch.value);
   }
 });
-adminToken.addEventListener('input', () => {
-  const token = adminToken.value.trim();
-  if (token) {
-    sessionStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, token);
-    return;
-  }
-
-  sessionStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
-});
 adminToken.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') {
     void loadList(0);
   }
 });
 
-setBusy(true);
-void loadList(0);
+setBusy(false);
+setStatus('운영 토큰을 입력한 뒤 목록 새로고침 또는 상세 조회를 실행하세요.');

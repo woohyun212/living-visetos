@@ -59,12 +59,6 @@ button{
 button.alt{background:#fff;color:var(--ink);}
 button:disabled{opacity:.35;cursor:not-allowed;}
 button:hover:not(:disabled){background:var(--red);border-color:var(--red);color:#fff;}
-.operatorLink{
-  display:inline-flex;align-items:center;justify-content:center;min-height:var(--ds-measure-control);
-  margin-left:auto;padding:0 var(--ds-space-md);border:1px solid var(--ds-hairline);border-radius:var(--ds-radius-pill);
-  background:var(--ds-pill);color:var(--ds-muted);font-size:var(--ds-font-utility);font-weight:400;text-decoration:none;
-}
-.operatorLink:focus-visible{outline:2px solid var(--ds-ink);outline-offset:2px;}
 #contract{
   background:var(--dark);color:#9fe0a8;font-family:ui-monospace,Menlo,monospace;font-size:11px;
   padding:12px;border-radius:6px;white-space:pre-wrap;margin-top:14px;max-width:1200px;line-height:1.5;

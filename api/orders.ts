@@ -33,23 +33,49 @@ type OrderSummary = {
   createdAt: string;
 };
 
+type NodeApiRequest = {
+  method?: string;
+  url?: string;
+  headers: Record<string, string | string[] | undefined>;
+  readable?: boolean;
+};
+
+type NodeApiResponse = {
+  statusCode: number;
+  setHeader(key: string, value: string): void;
+  end(body: string): void;
+};
+
 export const config = {
   runtime: 'nodejs',
 };
 
-export default {
-  async fetch(request: Request): Promise<Response> {
-    if (request.method === 'GET') {
-      return handleGet(request);
-    }
+export default async function handler(
+  request: Request | NodeApiRequest,
+  response?: NodeApiResponse,
+): Promise<Response | undefined> {
+  if (request instanceof Request) {
+    return handleRequest(request);
+  }
 
-    if (request.method === 'POST') {
-      return handlePost(request);
-    }
+  if (!response) {
+    throw new Error('Node response is required.');
+  }
 
-    return json({ error: 'Method not allowed.' }, 405, { Allow: 'GET, POST' });
-  },
-};
+  await sendNodeResponse(response, await handleRequest(toWebRequest(request, '/api/orders')));
+}
+
+async function handleRequest(request: Request): Promise<Response> {
+  if (request.method === 'GET') {
+    return handleGet(request);
+  }
+
+  if (request.method === 'POST') {
+    return handlePost(request);
+  }
+
+  return json({ error: 'Method not allowed.' }, 405, { Allow: 'GET, POST' });
+}
 
 async function handlePost(request: Request): Promise<Response> {
   const orderRateFailure = rateLimit(request, 'order', ORDER_RATE_LIMIT);
@@ -261,6 +287,40 @@ function isValidContact(value: string): boolean {
 
 function json(body: unknown, status: number, headers: Record<string, string> = {}): Response {
   return Response.json(body, { status, headers });
+}
+
+function toWebRequest(request: NodeApiRequest, fallbackPath: string): Request {
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(request.headers)) {
+    if (Array.isArray(value)) {
+      headers.set(key, value.join(', '));
+    } else if (value !== undefined) {
+      headers.set(key, value);
+    }
+  }
+
+  const method = request.method ?? 'GET';
+  const host = headers.get('host') ?? 'localhost';
+  const protocol = headers.get('x-forwarded-proto') ?? 'https';
+  const url = new URL(request.url ?? fallbackPath, `${protocol}://${host}`).toString();
+  if (method === 'GET' || method === 'HEAD') {
+    return new Request(url, { headers, method });
+  }
+
+  return new Request(url, {
+    body: request.readable === false ? null : request as unknown as BodyInit,
+    duplex: 'half',
+    headers,
+    method,
+  } as RequestInit & { duplex: 'half' });
+}
+
+async function sendNodeResponse(response: NodeApiResponse, webResponse: Response): Promise<void> {
+  response.statusCode = webResponse.status;
+  webResponse.headers.forEach((value, key) => {
+    response.setHeader(key, value);
+  });
+  response.end(await webResponse.text());
 }
 
 function supabaseAuthHeaders(serviceKey: string): Record<string, string> {
