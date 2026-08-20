@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>리빙 비세토스 — 한정판 드랍 (목업)</title>
+<link rel="icon" href="data:,">
+<link rel="preload" href="/assets/fonts/PretendardVariable.woff2" as="font" type="font/woff2" crossorigin>
+</head>
+<body>
+<main class="dropShell" aria-labelledby="dropTitle">
+  <header class="dropHero">
+    <div>
+      <p class="eyebrow">E · F-07</p>
+      <h1 id="dropTitle">앰배서더 시즌 패턴 한정판 드랍</h1>
+      <p class="heroCopy">앰배서더 나이비스와 함께 공개하는 시즌 패턴 3종입니다. 아래 패턴은 이미지가 아니라 키오스크와 동일한 F-02 L1 엔진이 고정 FeatureSeed로 즉석에서 렌더한 결과입니다.</p>
+    </div>
+    <nav class="heroLinks" aria-label="다른 화면으로 이동">
+      <span class="mockBadge">MOCK</span>
+      <a class="pillLink" href="/membership.html">멤버십 컨셉</a>
+      <a class="pillLink" href="/">키오스크로 돌아가기</a>
+    </nav>
+  </header>
+
+  <section class="statusBand" id="statusBand" aria-live="polite">시즌 패턴을 렌더하는 중입니다.</section>
+
+  <div class="bannerFrame" aria-hidden="true">
+    <canvas id="dropBanner" width="1188" height="160"></canvas>
+  </div>
+
+  <section class="dropMeta" aria-label="드랍 정보">
+    <div><span>시즌</span><b>2026 S/S · NAïVIS SIGNATURE</b></div>
+    <div><span>공개 패턴</span><b>3종 · L1 프로시저럴</b></div>
+    <div><span>수량</span><b id="quantityValue">—</b></div>
+    <div><span>응모 마감</span><b id="deadlineValue">—</b></div>
+    <div><span>남은 기간</span><b id="ddayValue">D-—</b></div>
+  </section>
+
+  <div class="dropGrid">
+    <section class="seasonPanel" aria-labelledby="seasonTitle">
+      <div class="panelHeader">
+        <div>
+          <p class="eyebrow">Season patterns · rendered by F-02 L1</p>
+          <h2 id="seasonTitle">시즌 패턴 공개</h2>
+        </div>
+        <span class="mockBadge">MOCK</span>
+      </div>
+      <div class="seasonGrid" id="seasonGrid" role="radiogroup" aria-labelledby="seasonTitle">
+        <p class="emptyState">시즌 패턴을 렌더하는 중입니다.</p>
+      </div>
+    </section>
+
+    <section class="entryPanel" aria-labelledby="entryTitle">
+      <div class="panelHeader">
+        <div>
+          <p class="eyebrow">Mock entry only</p>
+          <h2 id="entryTitle">드랍 응모</h2>
+        </div>
+        <span class="mockBadge">MOCK</span>
+      </div>
+      <form class="entryForm" id="entryForm" novalidate>
+        <p class="mockNotice">백엔드가 없는 F-07 목업 화면입니다. 제출해도 응모 접수, 추첨, 재고 차감, 결제가 일어나지 않습니다.</p>
+        <div class="selectedSeason">
+          <span>선택한 시즌 패턴</span>
+          <b id="selectedSeasonName">—</b>
+        </div>
+        <label>
+          <span>이름 또는 닉네임</span>
+          <input id="entryName" name="entryName" type="text" maxlength="40" autocomplete="name">
+        </label>
+        <label>
+          <span>연락처</span>
+          <input id="entryContact" name="entryContact" type="text" maxlength="80" autocomplete="email" placeholder="email@example.com 또는 010-0000-0000">
+        </label>
+        <label>
+          <span>응모 수량</span>
+          <select id="entryQuantity" name="entryQuantity">
+            <option value="1">1점</option>
+            <option value="2">2점</option>
+          </select>
+        </label>
+        <label class="consentRow">
+          <input id="entryConsent" name="entryConsent" type="checkbox">
+          <span>이 화면이 데모 목업이며 실제 응모가 접수되지 않는다는 점을 확인했습니다.</span>
+        </label>
+        <button class="submitButton" id="entrySubmit" type="submit">응모하기 (목업)</button>
+        <p class="formStatus" id="entryStatus" aria-live="polite"></p>
+      </form>
+    </section>
+  </div>
+</main>
+<script type="module" src="/src/drop/main.ts"></script>
+</body>
+</html>

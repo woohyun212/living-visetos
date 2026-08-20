@@ -1,0 +1,331 @@
+@font-face{
+  font-family:"Pretendard Variable";
+  src:url("/assets/fonts/PretendardVariable.woff2") format("woff2-variations");
+  font-weight:45 920;
+  font-style:normal;
+  font-display:swap;
+}
+
+:root{
+  --membership-canvas:#ffffff;
+  --membership-black:#000000;
+  --membership-ink:#222222;
+  --membership-muted:#4e4e4e;
+  --membership-surface:#f5f5f5;
+  --membership-pill:#f4f4f4;
+  --membership-hairline:#f0f0f0;
+  --membership-on-ink:#ffffff;
+  --membership-radius-none:0px;
+  --membership-radius-sm:6px;
+  --membership-radius-panel:16px;
+  --membership-radius-pill:30px;
+  --membership-border-hairline:1px;
+  --membership-border-active:2px;
+  --membership-space-xxs:2px;
+  --membership-space-xs:4px;
+  --membership-space-sm:6px;
+  --membership-space-md:8px;
+  --membership-space-lg:12px;
+  --membership-space-xl:24px;
+  --membership-space-2xl:48px;
+  --membership-measure-page:1188px;
+  --membership-measure-signature:380px;
+  --membership-measure-header:72px;
+  --membership-measure-control:30px;
+  --membership-font-body:16px;
+  --membership-font-utility:13px;
+  --membership-font-search:24px;
+  --membership-opacity-disabled:.35;
+  --membership-shadow-none:none;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+
+body{
+  min-width:320px;
+  background:var(--membership-canvas);
+  color:var(--membership-ink);
+  font-family:"Pretendard Variable","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  font-size:var(--membership-font-body);
+}
+
+.membershipShell{
+  width:min(var(--membership-measure-page),calc(100vw - var(--membership-space-2xl)));
+  margin:0 auto;
+  padding:var(--membership-space-xl) 0 var(--membership-space-2xl);
+}
+
+.membershipHero{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:var(--membership-space-xl);
+  padding:var(--membership-space-xl) 0;
+  border-bottom:var(--membership-border-hairline) solid var(--membership-hairline);
+}
+
+.eyebrow{
+  color:var(--membership-muted);
+  font-size:var(--membership-font-utility);
+  font-weight:400;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+h1{
+  margin-top:var(--membership-space-xs);
+  color:var(--membership-ink);
+  font-size:var(--membership-font-search);
+  font-weight:700;
+  line-height:1.21;
+  letter-spacing:-.02em;
+}
+
+h2{
+  margin-top:var(--membership-space-xs);
+  color:var(--membership-ink);
+  font-size:var(--membership-font-body);
+  font-weight:700;
+}
+
+h3{
+  color:var(--membership-ink);
+  font-size:var(--membership-font-body);
+  font-weight:700;
+}
+
+.heroCopy{
+  max-width:560px;
+  margin-top:var(--membership-space-lg);
+  color:var(--membership-muted);
+  font-size:var(--membership-font-utility);
+  line-height:1.7;
+}
+
+.heroLinks{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:var(--membership-space-md);
+}
+
+.conceptBadge{
+  display:inline-flex;
+  align-items:center;
+  height:var(--membership-measure-control);
+  padding:0 var(--membership-space-md);
+  border:var(--membership-border-active) solid var(--membership-ink);
+  border-radius:var(--membership-radius-pill);
+  color:var(--membership-ink);
+  font-size:var(--membership-font-utility);
+  font-weight:700;
+  letter-spacing:.08em;
+}
+
+.pillLink{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  height:var(--membership-measure-control);
+  padding:0 var(--membership-space-md);
+  border:0;
+  border-radius:var(--membership-radius-pill);
+  background:var(--membership-pill);
+  color:var(--membership-muted);
+  font-size:var(--membership-font-utility);
+  text-decoration:none;
+}
+
+.statusBand{
+  min-height:var(--membership-measure-control);
+  margin-top:var(--membership-space-xl);
+  padding:var(--membership-space-md) var(--membership-space-lg);
+  border:var(--membership-border-hairline) solid var(--membership-hairline);
+  border-radius:var(--membership-radius-sm);
+  background:var(--membership-surface);
+  color:var(--membership-muted);
+  font-size:var(--membership-font-utility);
+  line-height:1.5;
+}
+
+.conceptRow{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:var(--membership-space-xl);
+  margin-top:var(--membership-space-xl);
+}
+
+.conceptCard{
+  display:grid;
+  align-content:start;
+  gap:var(--membership-space-lg);
+  padding:var(--membership-space-xl);
+  border:var(--membership-border-hairline) solid var(--membership-hairline);
+  border-radius:var(--membership-radius-panel);
+}
+
+.conceptCard p,.stageCard span,.signatureMeta span,.flowList li,.panelNote{
+  color:var(--membership-muted);
+  font-size:var(--membership-font-utility);
+  font-weight:400;
+  line-height:1.7;
+}
+
+.conceptStep{
+  color:var(--membership-muted);
+  font-size:var(--membership-font-utility);
+  letter-spacing:.08em;
+}
+
+.evolutionPanel,.signaturePanel{
+  margin-top:var(--membership-space-xl);
+  border:var(--membership-border-hairline) solid var(--membership-hairline);
+  border-radius:var(--membership-radius-panel);
+  background:var(--membership-canvas);
+  box-shadow:var(--membership-shadow-none);
+  overflow:hidden;
+}
+
+.panelHeader{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:var(--membership-space-lg);
+  min-height:var(--membership-measure-header);
+  padding:var(--membership-space-lg) var(--membership-space-xl);
+  border-bottom:var(--membership-border-hairline) solid var(--membership-hairline);
+}
+
+.evolutionTrack{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);
+  align-items:stretch;
+  gap:var(--membership-space-lg);
+  padding:var(--membership-space-xl);
+}
+
+.stageArrow{
+  align-self:center;
+  color:var(--membership-muted);
+  font-size:var(--membership-font-search);
+  line-height:1;
+}
+
+.stageCard{
+  display:grid;
+  gap:var(--membership-space-lg);
+  padding:var(--membership-space-lg);
+  border:var(--membership-border-hairline) solid var(--membership-hairline);
+  border-radius:var(--membership-radius-sm);
+}
+
+.stageCard.stageCard--current{
+  border:var(--membership-border-active) solid var(--membership-ink);
+  padding:calc(var(--membership-space-lg) - 1px);
+}
+
+.stageFrame{
+  overflow:hidden;
+  border-radius:var(--membership-radius-sm);
+  background:var(--membership-surface);
+  aspect-ratio:1/1;
+}
+
+.stageFrame canvas{
+  display:block;
+  width:100%;
+  height:100%;
+}
+
+.stageHead{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:var(--membership-space-md);
+}
+
+.stageMeta{
+  display:grid;
+  gap:var(--membership-space-md);
+}
+
+.stageMeta b,.signatureMeta b{
+  display:block;
+  margin-top:var(--membership-space-xxs);
+  color:var(--membership-ink);
+  font-size:var(--membership-font-utility);
+  font-weight:700;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.panelNote{
+  padding:0 var(--membership-space-xl) var(--membership-space-xl);
+}
+
+.signatureSide .panelNote{
+  padding:0;
+}
+
+.signatureBody{
+  display:grid;
+  grid-template-columns:var(--membership-measure-signature) minmax(0,1fr);
+  gap:var(--membership-space-xl);
+  padding:var(--membership-space-xl);
+}
+
+.signatureFrame{
+  overflow:hidden;
+  border-radius:var(--membership-radius-sm);
+  background:var(--membership-surface);
+  aspect-ratio:1/1;
+}
+
+.signatureFrame canvas{
+  display:block;
+  width:100%;
+  height:100%;
+}
+
+.signatureSide{
+  display:grid;
+  align-content:start;
+  gap:var(--membership-space-xl);
+}
+
+.signatureMeta{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:var(--membership-space-lg);
+}
+
+.paletteRow{
+  display:flex;
+  gap:var(--membership-space-xs);
+  margin-top:var(--membership-space-xxs);
+}
+
+.paletteRow i{
+  width:var(--membership-space-xl);
+  height:var(--membership-space-lg);
+  border:var(--membership-border-hairline) solid var(--membership-hairline);
+}
+
+.flowList{
+  display:grid;
+  gap:var(--membership-space-lg);
+  padding-left:var(--membership-space-xl);
+}
+
+.emptyState{
+  padding:var(--membership-space-xl);
+  color:var(--membership-muted);
+  font-size:var(--membership-font-utility);
+}
+
+@media(max-width:900px){
+  .membershipShell{width:min(100% - var(--membership-space-xl),var(--membership-measure-page));}
+  .membershipHero,.conceptRow,.evolutionTrack,.signatureBody{display:grid;grid-template-columns:1fr;}
+  .stageArrow{display:none;}
+}

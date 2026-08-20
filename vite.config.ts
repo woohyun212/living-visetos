@@ -9,6 +9,8 @@ export default defineConfig({
         kiosk: 'index.html',
         admin: 'admin.html',
         result: 'result.html',
+        drop: 'drop.html',
+        membership: 'membership.html',
       },
     },
   },
