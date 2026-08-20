@@ -162,8 +162,8 @@ async function runDeliver(): Promise<void> {
   }
 
   btn.disabled = true;
-  setDelivery('첫 실루엣 프레임을 준비한 뒤 녹화를 시작합니다.', '처리 중');
-  setStatus('오버레이 첫 프레임을 준비하는 중입니다.');
+  setDelivery('첫 실루엣 마스크 프레임을 준비한 뒤 녹화를 시작합니다.', '처리 중');
+  setStatus('오버레이 첫 마스크 프레임을 준비하는 중입니다.');
 
   try {
     await overlay.waitForFrame();
