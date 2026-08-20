@@ -3,18 +3,23 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "engines": {
+    "node": ">=22.6.0"
+  },
   "scripts": {
     "postinstall": "node scripts/sync-mediapipe-wasm.mjs",
     "predev": "node scripts/sync-mediapipe-wasm.mjs",
     "dev": "vite",
     "prebuild": "node scripts/sync-mediapipe-wasm.mjs",
     "build": "tsc && vite build",
+    "test": "node --experimental-strip-types --test test/pattern.test.ts test/state.test.ts",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "kiosk": "echo 'chrome --kiosk --autoplay-policy=no-user-gesture-required http://localhost:4173 (npm run preview 먼저)'"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^1.0.1",
+    "qrcode": "^1.5.4",
     "three": "^0.160.0"
   },
   "devDependencies": {

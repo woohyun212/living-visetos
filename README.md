@@ -8,6 +8,8 @@
 ```bash
 npm install
 npm run dev          # http://localhost:5173 → 카메라 허용 → 버튼 0→1→2→3→4
+npm run dev          # http://localhost:5173/admin.html → F-09 운영 대시보드
+npm run dev          # http://localhost:5173/results/ABCD-1234 → F-06 공개 결과/목업 주문
 ```
 
 | 명령 | 하는 일 |
@@ -30,7 +32,7 @@ npm run dev          # http://localhost:5173 → 카메라 허용 → 버튼 0�
 | --- | --- |
 | [`docs/DEV_SETUP.md`](docs/DEV_SETUP.md) | 누가·규칙 (모듈 분담, 브랜치, 통합의 날) |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 어떻게 (컴포넌트, 상태머신, ADR, 폴백 매트릭스) |
-| [`docs/DESIGN.md`](docs/DESIGN.md) | 어떻게 보이는가 (팔레트, 타이포, 컴포넌트) |
+| [`DESIGN.md`](DESIGN.md) | 어떻게 보이는가 (팔레트, 타이포, 컴포넌트) |
 | [`docs/skeleton_v0.html`](docs/skeleton_v0.html) | 이 리포가 태어난 v0 걷는 스켈레톤 (히스토리 · 단일 파일로 실행 가능) |
 
 ## 구조와 담당
@@ -42,12 +44,43 @@ src/
 ├─ vision/        A 비전·캡처     capture.ts / segmenter.ts / seed.ts
 ├─ pattern/       B 패턴 엔진     l1.ts (프로시저럴) / l2.ts (생성AI 승격 스텁)
 ├─ render/        C 렌더·연출     overlay.ts (실루엣) / bag.ts (3D 가방)
-├─ output/        D 결과물·웹     recorder.ts (스텁)
+├─ output/        D 결과물·웹     recorder.ts (녹화·업로드) / qr.ts (QR·짧은 링크)
 └─ mocks/         모듈별 목 데이터 — 옆 모듈이 늦어도 내 개발은 멈추지 않는다
 public/models/    A: 세그멘테이션 모델 로컬 번들 (예정)
 public/assets/    C: 가방 GLTF, 폰트, 사운드
 cloud/            D: Vercel Functions + 결과 페이지 (예정)
 ```
+
+## F-05 결과 전달 카드 (QR / 오프라인 코드)
+
+`deliver()`가 `DeliveryTicket`을 돌려주면 키오스크는 버튼 줄 아래 결과 카드를 띄운다.
+
+- `kind:'url'` → 256px 캔버스 QR + 짧은 링크 + "폰으로 스캔하세요". QR에 넣는 값은 항상
+  `new URL(ticket.url, location.origin).href`로 절대화한다. 상대 경로를 그대로 넣으면 폰에서 열리지 않는다.
+- `kind:'code'` → QR 없이 세션 코드를 크게 + "나중에 이 코드로 받아가세요" (ARCHITECTURE §9 오프라인 폴백).
+- 카드는 `0. 카메라 시작` 또는 `1. 씨앗 추출`을 누르면 사라진다(티켓도 같이 버린다). 앞 관객의 결과가 다음 사람 화면에 남지 않는다.
+- QR 라이브러리는 `qrcode`(MIT)를 dependencies로 **로컬 번들**한다. CDN을 타지 않는다 (ADR-003과 같은 오프라인 원칙).
+- 개발 확인: `npm run dev` 후 `?mockTicket=url` 또는 `?mockTicket=code`로 카메라 없이 카드를 렌더한다.
+  이 주입은 `import.meta.env.DEV` 가드 안에 있어 프로덕션 번들에는 포함되지 않는다.
+- 실기기 스캔은 QR이 가리키는 호스트에 폰이 닿을 수 있어야 한다. `localhost`는 폰에서 열리지 않으므로
+  LAN 호스트(`vite --host`)나 배포 URL(`RESULT_PUBLIC_BASE_URL`)에서 확인한다.
+
+## F-06 공개 결과와 목업 주문 + F-09 운영 대시보드
+
+`/admin.html`은 키오스크 `index.html`과 분리된 Vite 멀티 페이지 진입점이다. 런타임은
+`src/admin/` 아래 정적 DOM + TypeScript만 사용하며 `src/main.ts`, 카메라, 세그멘터,
+오버레이, 가방 프리뷰 클래스를 import하지 않는다.
+
+- 공개 결과: F-05 `POST /api/results`가 반환하는 `/results/{code}`는 `result.html`과 `src/result/` 정적 진입점으로 열린다. 로컬 Vite dev와 Vercel 모두 deep link를 `result.html`로 rewrite한다.
+- 공개 조회: 방문자 페이지는 운영 토큰 없이 `GET /api/results?code=ABCD-1234`를 호출한다. 이 공개 모드는 `code`, `patternName`, `issuedAt`, `posterUrl`, `videoUrl`, `assetUrlExpiresAt`만 반환하며 서비스 롤 키와 운영 토큰은 노출하지 않는다.
+- 목업 주문: 방문자 페이지의 폼은 `POST /api/orders`로 `resultCode`, `visitorName`, `contact`, `productOption`, `consent`를 저장하고 `{ orderId }`만 받는다. 연락처는 이메일 또는 전화번호 형식이어야 하며, 필드 길이와 함수 인스턴스 단위 rate limit이 적용된다.
+- 목록: `GET /api/results?limit=20&offset=0`으로 Supabase `results` 테이블의 업로드 완료 기록을 최신순으로 조회한다.
+- 상세: 운영 토큰이 있는 `GET /api/results?code=ABCD-1234`는 코드 단건을 조회하고 서버에서 Supabase Storage signed URL과 운영용 `tileMeta`를 발급한다. 같은 코드의 목업 주문은 `GET /api/orders?code=ABCD-1234`로 함께 표시한다.
+- 환경: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_RESULTS_BUCKET`, `RESULT_ADMIN_TOKEN`, `RESULT_ASSET_URL_TTL_SECONDS`가 필요하다. F-05 POST URL 응답에는 기존처럼 `RESULT_PUBLIC_BASE_URL`도 필요하다.
+- 테이블: Supabase에는 기존 `results` 테이블 외에 `orders` 테이블이 필요하다. 최소 컬럼은 `id`, `result_code`, `visitor_name`, `contact`, `product_option`, `consent`, `created_at`이다.
+- 보안: F-09 운영 GET 목록/상세와 `GET /api/orders`는 `Authorization: Bearer <RESULT_ADMIN_TOKEN>`이 필요하다. 키오스크 F-05 POST, 공개 결과 조회, 방문자 F-06 `POST /api/orders`는 같은 토큰을 요구하지 않는다.
+- 업로드 방어: F-05 POST는 서버에서 video/poster MIME과 용량을 제한하고, 함수 인스턴스 단위의 기본 rate limit을 둔다. 운영 배포에서는 Vercel/WAF 같은 플랫폼 rate limit도 같이 거는 것을 전제로 한다.
+- 한계: F-06 주문은 결제, 제작, 배송, 재고 차감이 없는 데모 기록이다. F-09는 Supabase에 업로드된 기록만 보여준다. 오프라인 IndexedDB 재시도 큐는 이 PR에서 drain하지 않는다. Signed URL은 버킷/오브젝트 권한이 맞아야 열리며, 현재 F-05 녹화본은 전체 최종 가방 합성이 아니라 `overlayCanvas` 기준이다.
 
 **계약이 국경이다.** 모듈은 `src/contracts.ts`의 타입으로만 대화한다. 구현은 자유.
 계약 v1의 출처는 `docs/ARCHITECTURE.md` §5 (DEV_SETUP §3의 초안을 대체).

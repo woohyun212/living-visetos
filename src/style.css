@@ -12,16 +12,32 @@
 :root{
   --ivory:#F7F3EC;--ink:#1E1B17;--line:#E4DCCE;--red:#B42431;--cognac:#A9652C;--dark:#181512;--gold:#C9A227;
   /* DESIGN.md tokens */
-  --ds-canvas:#ffffff;--ds-ink:#222222;--ds-hairline:#f0f0f0;--ds-muted:#4e4e4e;--ds-radius-sm:6px;
+  --ds-canvas:#ffffff;--ds-ink:#222222;--ds-surface:#f5f5f5;--ds-pill:#f4f4f4;--ds-hairline:#f0f0f0;--ds-muted:#4e4e4e;--ds-radius-none:0px;--ds-radius-sm:6px;--ds-radius-pill:30px;--ds-border-hairline:1px;--ds-border-active:2px;--ds-space-xs:4px;--ds-space-sm:6px;--ds-space-md:8px;--ds-space-lg:12px;--ds-space-xl:24px;--ds-measure-page:1200px;--ds-measure-control:30px;--ds-font-utility:13px;--ds-font-body:16px;--ds-font-search:24px;--ds-font-ticket:clamp(var(--ds-font-search),4vw,40px);--ds-weight-regular:400;--ds-weight-bold:700;--ds-line-tight:1.21;--ds-shadow-none:none;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:var(--ivory);color:var(--ink);font-family:"Apple SD Gothic Neo","Malgun Gothic",sans-serif;padding:20px;}
 h1{font-size:20px;letter-spacing:-.01em;}
 h1 span{color:var(--red);font-weight:300;}
 .sub{color:#6b6154;font-size:12.5px;margin:4px 0 16px;}
-.grid{display:grid;grid-template-columns:1.35fr 1fr;gap:14px;max-width:1200px;}
+.grid{display:grid;grid-template-columns:1.35fr 1fr;gap:14px;max-width:var(--ds-measure-page);}
 @media(max-width:900px){.grid{grid-template-columns:1fr;}}
 .panel{background:#fff;border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+.deliveryPanel{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,auto);align-items:stretch;gap:var(--ds-space-lg);max-width:var(--ds-measure-page);margin:var(--ds-space-md) 0 14px;
+  padding:var(--ds-space-lg);background:var(--ds-canvas);border:var(--ds-border-active) solid var(--ds-ink);border-radius:var(--ds-radius-sm);
+  color:var(--ds-ink);font-family:"Pretendard Variable","Apple SD Gothic Neo","Malgun Gothic",sans-serif;box-shadow:var(--ds-shadow-none);
+}
+.deliveryCopy{display:grid;align-content:center;gap:var(--ds-space-xs);min-width:0;}
+.deliveryPanel b{color:var(--ds-muted);font-size:var(--ds-font-utility);font-weight:var(--ds-weight-regular);letter-spacing:.08em;text-transform:uppercase;}
+#deliveryInfo{color:var(--ds-ink);font-size:var(--ds-font-body);font-weight:var(--ds-weight-bold);line-height:1.5;}
+.deliveryInstruction{color:var(--ds-muted);font-size:var(--ds-font-utility);font-weight:var(--ds-weight-regular);line-height:1.5;}
+.deliveryTicketBox{display:grid;align-content:center;gap:var(--ds-space-sm);min-width:0;padding:0 var(--ds-space-xl);border-left:var(--ds-border-active) solid var(--ds-ink);background:var(--ds-surface);}
+.deliveryTicketLabel{color:var(--ds-muted);font-size:var(--ds-font-utility);font-weight:var(--ds-weight-regular);letter-spacing:.08em;text-transform:uppercase;}
+.deliveryPanel code{
+  display:block;max-width:100%;padding:0;border-radius:var(--ds-radius-none);background:transparent;color:var(--ds-ink);
+  font-family:ui-monospace,Menlo,monospace;font-size:var(--ds-font-ticket);font-weight:var(--ds-weight-bold);letter-spacing:.04em;line-height:var(--ds-line-tight);overflow-wrap:anywhere;
+}
+@media(max-width:900px){.deliveryPanel{grid-template-columns:1fr;}.deliveryTicketBox{border-left:0;border-top:var(--ds-border-active) solid var(--ds-ink);padding:var(--ds-space-lg) 0 0;}}
 .panel h2{font-size:11.5px;letter-spacing:.18em;padding:9px 12px;background:var(--dark);color:#F1EADB;}
 .panel h2 b{color:var(--gold);}
 .stage{position:relative;background:#000;aspect-ratio:4/3;}
@@ -61,3 +77,112 @@ button:hover:not(:disabled){background:var(--red);border-color:var(--red);color:
 .panel--seed h2 b{color:var(--ds-ink);font-weight:700;}
 .panel--seed .seedColors i{border-radius:var(--ds-radius-sm);border:1px solid var(--ds-hairline);}
 .panel--seed .kv{color:var(--ds-muted);font-size:13px;font-weight:400;}
+
+/* 결과 전달 카드 (D · F-05) — DESIGN.md 토큰. kind:'url' 은 QR, kind:'code' 는 큰 코드. */
+.resultCard{
+  display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:var(--ds-space-xl);
+  max-width:var(--ds-measure-page);margin:0 0 14px;padding:var(--ds-space-xl);
+  background:var(--ds-canvas);border:var(--ds-border-active) solid var(--ds-ink);border-radius:var(--ds-radius-sm);
+  color:var(--ds-ink);font-family:"Pretendard Variable","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  box-shadow:var(--ds-shadow-none);
+}
+.resultCard[hidden]{display:none;}
+.resultCardQr{
+  display:grid;place-items:center;padding:var(--ds-space-lg);
+  background:var(--ds-canvas);border:var(--ds-border-hairline) solid var(--ds-hairline);border-radius:var(--ds-radius-sm);
+}
+/* 256px 고정 — 어떤 뷰포트에서도 스캔 가능 최소 크기(200px) 아래로 내려가지 않는다. */
+#resultQrCanvas{display:block;width:256px;height:256px;}
+.resultCardCopy{display:grid;align-content:center;gap:var(--ds-space-sm);min-width:0;}
+.resultCardEyebrow{
+  color:var(--ds-muted);font-size:var(--ds-font-utility);font-weight:var(--ds-weight-regular);
+  letter-spacing:.08em;text-transform:uppercase;
+}
+.resultCardHeadline{
+  color:var(--ds-ink);font-size:var(--ds-font-search);font-weight:var(--ds-weight-bold);line-height:var(--ds-line-tight);
+}
+.resultCardValue{
+  color:var(--ds-ink);font-family:ui-monospace,Menlo,monospace;font-size:var(--ds-font-body);
+  font-weight:var(--ds-weight-bold);letter-spacing:.02em;line-height:1.5;overflow-wrap:anywhere;
+}
+.resultCardNote{color:var(--ds-muted);font-size:var(--ds-font-utility);font-weight:var(--ds-weight-regular);line-height:1.5;}
+/* 오프라인 폴백(ARCHITECTURE §9): 스캔할 대상이 없으니 QR 대신 코드를 크게 세운다. */
+.resultCard--code{grid-template-columns:minmax(0,1fr);}
+.resultCard--code .resultCardQr{display:none;}
+.resultCard--code .resultCardValue{font-size:var(--ds-font-ticket);letter-spacing:.04em;line-height:var(--ds-line-tight);}
+@media(max-width:900px){.resultCard{grid-template-columns:minmax(0,1fr);justify-items:start;}}
+
+/* ── E · 키오스크 상태머신 화면 (ATTRACT→OWN) ─────────────────────
+   DESIGN.md 토큰(--ds-*)만 쓴다. 연출이 아니라 구조를 보여주는 것이 목적.
+   ⚠️ 오버레이는 position:fixed 로 **덮기만** 한다. 아래 그리드를 display:none 하면
+      overlayCanvas 크기가 0이 되어 녹화(canDeliver)가 조용히 막힌다. */
+.kioskOverlay{
+  position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:var(--ds-space-xl);
+  background:color-mix(in srgb, var(--ds-canvas) 92%, transparent);
+  font-family:"Pretendard Variable","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+}
+.kioskOverlay[hidden]{display:none;}
+/* ATTRACT — 유휴 풀스크린. 화면 어디를 눌러도 시작된다. */
+.kioskOverlay--attract{background:var(--ds-canvas);cursor:pointer;}
+/* 진행 안내 — 관객이 자기 모습을 봐야 하므로 아래쪽 띠로만 걸친다. */
+.kioskOverlay--thin{
+  inset:auto 0 0 0;place-items:end center;padding:var(--ds-space-lg);
+  background:transparent;pointer-events:none;
+}
+.kioskCard{
+  display:grid;gap:var(--ds-space-md);justify-items:center;text-align:center;
+  width:min(680px,100%);padding:var(--ds-space-xl);
+  background:var(--ds-canvas);border:var(--ds-border-active) solid var(--ds-ink);
+  border-radius:var(--ds-radius-sm);color:var(--ds-ink);box-shadow:var(--ds-shadow-none);
+}
+.kioskOverlay--thin .kioskCard{
+  width:min(680px,100%);gap:var(--ds-space-xs);padding:var(--ds-space-lg) var(--ds-space-xl);
+  border-width:var(--ds-border-hairline);border-color:var(--ds-hairline);
+}
+.kioskEyebrow{
+  color:var(--ds-muted);font-size:var(--ds-font-utility);font-weight:var(--ds-weight-regular);
+  letter-spacing:.08em;text-transform:uppercase;
+}
+.kioskHeadline{
+  color:var(--ds-ink);font-size:var(--ds-font-ticket);font-weight:var(--ds-weight-bold);
+  line-height:var(--ds-line-tight);
+}
+.kioskOverlay--thin .kioskHeadline{font-size:var(--ds-font-search);}
+.kioskNote{
+  color:var(--ds-muted);font-size:var(--ds-font-body);font-weight:var(--ds-weight-regular);line-height:1.5;
+}
+.kioskOverlay--thin .kioskNote{font-size:var(--ds-font-utility);}
+.kioskCountdown{
+  margin-top:var(--ds-space-md);color:var(--ds-muted);font-size:var(--ds-font-utility);
+  font-variant-numeric:tabular-nums;letter-spacing:.04em;
+}
+.kioskActions,.kioskForm{
+  display:flex;flex-wrap:wrap;justify-content:center;gap:var(--ds-space-lg);
+  margin-top:var(--ds-space-lg);width:100%;
+}
+.kioskBtn{
+  min-height:56px;padding:0 var(--ds-space-xl);border:var(--ds-border-active) solid var(--ds-ink);
+  border-radius:var(--ds-radius-pill);background:var(--ds-canvas);color:var(--ds-ink);
+  font-family:inherit;font-size:var(--ds-font-body);font-weight:var(--ds-weight-bold);cursor:pointer;
+}
+.kioskBtn--primary{background:var(--ds-ink);color:var(--ds-canvas);}
+.kioskBtn:hover{background:var(--ds-surface);color:var(--ds-ink);border-color:var(--ds-ink);}
+.kioskBtn--primary:hover{background:var(--ds-muted);color:var(--ds-canvas);}
+.kioskBtn:focus-visible{outline:2px solid var(--ds-ink);outline-offset:3px;}
+.kioskInput{
+  flex:1 1 280px;min-height:56px;padding:0 var(--ds-space-lg);
+  border:var(--ds-border-active) solid var(--ds-ink);border-radius:var(--ds-radius-sm);
+  background:var(--ds-canvas);color:var(--ds-ink);
+  font-family:inherit;font-size:var(--ds-font-search);font-weight:var(--ds-weight-bold);text-align:center;
+}
+.kioskInput:focus-visible{outline:2px solid var(--ds-ink);outline-offset:3px;}
+
+/* 상태 표시 — 어느 모드에서든 화면 구석에 작게 (요구사항 4). */
+.stateBadge{
+  position:fixed;right:var(--ds-space-lg);bottom:var(--ds-space-lg);z-index:60;
+  padding:var(--ds-space-sm) var(--ds-space-lg);border:var(--ds-border-hairline) solid var(--ds-hairline);
+  border-radius:var(--ds-radius-pill);background:var(--ds-pill);color:var(--ds-muted);
+  font-family:ui-monospace,Menlo,monospace;font-size:var(--ds-font-utility);letter-spacing:.06em;
+  font-variant-numeric:tabular-nums;pointer-events:none;
+}
+.stateBadge[data-state="ERROR_RECOVER"]{border-color:var(--red);color:var(--red);}

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>리빙 비세토스 — 멤버십 패턴 시그니처 (컨셉)</title>
+<link rel="icon" href="data:,">
+<link rel="preload" href="/assets/fonts/PretendardVariable.woff2" as="font" type="font/woff2" crossorigin>
+</head>
+<body>
+<main class="membershipShell" aria-labelledby="membershipTitle">
+  <header class="membershipHero">
+    <div>
+      <p class="eyebrow">E · F-08</p>
+      <h1 id="membershipTitle">멤버십 패턴 시그니처</h1>
+      <p class="heroCopy">체험으로 태어난 패턴을 계정의 시그니처로 저장하고, 재방문할 때마다 같은 씨앗에서 조금씩 자라게 하는 컨셉 화면입니다. 아래 회차별 패턴은 같은 FeatureSeed에 sessionId만 바꿔 F-02 L1 엔진으로 실제 렌더한 결과입니다.</p>
+    </div>
+    <nav class="heroLinks" aria-label="다른 화면으로 이동">
+      <span class="conceptBadge">CONCEPT</span>
+      <a class="pillLink" href="/drop.html">한정판 드랍</a>
+      <a class="pillLink" href="/">키오스크로 돌아가기</a>
+    </nav>
+  </header>
+
+  <section class="statusBand" id="statusBand" aria-live="polite">회차별 시그니처를 렌더하는 중입니다.</section>
+
+  <section class="conceptRow" aria-label="멤버십 컨셉 3축">
+    <article class="conceptCard">
+      <p class="conceptStep">01 — ACCOUNT LINK</p>
+      <h3>계정 연동</h3>
+      <p>OWN 단계의 QR을 멤버십 계정으로 열면 패턴 인증 카드가 계정에 붙습니다. 실제 계정 연동은 데모 스코프 밖이며, 이 화면은 연동 이후의 모습만 보여줍니다.</p>
+    </article>
+    <article class="conceptCard">
+      <p class="conceptStep">02 — RETURN VISIT</p>
+      <h3>재방문 인식</h3>
+      <p>다음 방문에서 계정을 인식하면 키오스크는 백지에서 시작하지 않습니다. 저장된 시그니처를 먼저 불러오고, 그 위에서 이번 회차의 특징을 얹습니다.</p>
+    </article>
+    <article class="conceptCard">
+      <p class="conceptStep">03 — PATTERN EVOLUTION</p>
+      <h3>패턴 진화</h3>
+      <p>색·모션·리듬 씨앗은 그대로 두고 회차마다 sessionId만 바뀝니다. 문법과 팔레트는 유지된 채 모티프 조합과 위상만 변주되므로, 같은 계보가 자란 것처럼 읽힙니다.</p>
+    </article>
+  </section>
+
+  <section class="evolutionPanel" aria-labelledby="evolutionTitle">
+    <div class="panelHeader">
+      <div>
+        <p class="eyebrow">Rendered by F-02 L1 · same seed, new sessionId</p>
+        <h2 id="evolutionTitle">회차별 패턴 진화</h2>
+      </div>
+      <span class="conceptBadge">CONCEPT</span>
+    </div>
+    <div class="evolutionTrack" id="evolutionTrack">
+      <p class="emptyState">회차별 시그니처를 렌더하는 중입니다.</p>
+    </div>
+    <p class="panelNote">세 화면은 dominantColors·motionEnergy·rhythm이 완전히 같고 sessionId만 다릅니다. F-02 문법상 sessionId는 스타일 구간을 뒤집지 않고 모티프 실루엣·강조 배치·위상만 바꾸기 때문에, 회차가 쌓여도 "내 패턴"이라는 정체성이 유지됩니다.</p>
+  </section>
+
+  <section class="signaturePanel" aria-labelledby="signatureTitle">
+    <div class="panelHeader">
+      <div>
+        <p class="eyebrow">Account signature mock</p>
+        <h2 id="signatureTitle">계정 시그니처 카드</h2>
+      </div>
+      <span class="conceptBadge">CONCEPT</span>
+    </div>
+    <div class="signatureBody">
+      <div class="signatureFrame">
+        <canvas id="signatureCanvas" width="512" height="512"></canvas>
+      </div>
+      <div class="signatureSide">
+        <div class="signatureMeta">
+          <div><span>회원 ID</span><b id="memberIdValue">—</b></div>
+          <div><span>가입</span><b id="memberSinceValue">—</b></div>
+          <div><span>누적 체험</span><b id="visitCountValue">—</b></div>
+          <div><span>현재 시그니처</span><b id="signatureSeedValue">—</b></div>
+          <div><span>모티프 밀도</span><b id="signatureDensityValue">—</b></div>
+          <div>
+            <span>팔레트</span>
+            <div class="paletteRow" id="signaturePalette"></div>
+          </div>
+        </div>
+        <div>
+          <h3>재방문 인식 흐름</h3>
+          <ol class="flowList">
+            <li>계정 QR 또는 멤버십 앱으로 키오스크에 로그인합니다.</li>
+            <li>저장된 시그니처 씨앗을 불러와 이번 회차의 sessionId를 새로 발급합니다.</li>
+            <li>진화한 패턴이 실루엣·3D 가방에 입혀지고, 회차 기록이 계정에 누적됩니다.</li>
+          </ol>
+        </div>
+        <p class="panelNote">계정 연동, 로그인, 저장은 데모 스코프 밖입니다(기획서 §7 Out). 이 카드에 보이는 회원 정보는 목업 값이며 저장되지 않습니다.</p>
+      </div>
+    </div>
+  </section>
+</main>
+<script type="module" src="/src/membership/main.ts"></script>
+</body>
+</html>
