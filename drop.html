@@ -8,65 +8,113 @@
 <link rel="preload" href="/assets/fonts/PretendardVariable.woff2" as="font" type="font/woff2" crossorigin>
 </head>
 <body>
-<main class="dropShell" aria-labelledby="dropTitle">
-  <header class="dropHero">
-    <div>
-      <p class="eyebrow">E · F-07</p>
-      <h1 id="dropTitle">앰배서더 시즌 패턴 한정판 드랍</h1>
-      <p class="heroCopy">앰배서더 나이비스와 함께 공개하는 시즌 패턴 3종입니다. 아래 패턴은 이미지가 아니라 키오스크와 동일한 F-02 L1 엔진이 고정 FeatureSeed로 즉석에서 렌더한 결과입니다.</p>
-    </div>
-    <nav class="heroLinks" aria-label="다른 화면으로 이동">
-      <span class="mockBadge">MOCK</span>
-      <a class="pillLink" href="/membership.html">멤버십 컨셉</a>
-      <a class="pillLink" href="/">키오스크로 돌아가기</a>
+<a class="skipLink" href="#dropMain">본문으로 건너뛰기</a>
+
+<!-- 사이트 헤더 — membership.html 과 동일한 마크업·클래스를 공유한다(스타일은 각 페이지 CSS에 같은 값으로 복제). -->
+<header class="siteBar">
+  <div class="siteBarInner">
+    <a class="siteMark" href="/">
+      <b>LIVING VISETOS</b>
+      <span>키오스크 데모 · 2026</span>
+    </a>
+    <nav class="siteNav" aria-label="주요 화면">
+      <a class="siteNavLink is-active" href="/drop.html" aria-current="page">한정판 드랍</a>
+      <a class="siteNavLink" href="/membership.html">멤버십</a>
+      <a class="siteNavLink" href="/">키오스크</a>
     </nav>
-  </header>
+  </div>
+</header>
+
+<main id="dropMain" class="dropShell" aria-labelledby="dropTitle">
+  <section class="dropHero">
+    <div class="heroCopy">
+      <p class="eyebrow">E · F-07 <span class="mockBadge">MOCK</span></p>
+      <h1 id="dropTitle">앰배서더 시즌 패턴<br>한정판 드랍</h1>
+      <p class="heroLead">앰배서더 나이비스와 함께 공개하는 2026 S/S 시즌 패턴 3종. 화면의 모든 패턴은 이미지 자산이 아니라 키오스크와 동일한 <b>F-02 L1 엔진</b>이 고정 FeatureSeed로 지금 렌더한 결과입니다.</p>
+
+      <div class="heroCountdown" aria-labelledby="heroCountdownLabel">
+        <p class="countdownLabel" id="heroCountdownLabel">선택한 패턴 응모 마감까지</p>
+        <div class="countdownClock" id="heroClock" aria-live="off">
+          <div class="clockUnit"><b id="clockDays">--</b><span>DAYS</span></div>
+          <i aria-hidden="true">:</i>
+          <div class="clockUnit"><b id="clockHours">--</b><span>HRS</span></div>
+          <i aria-hidden="true">:</i>
+          <div class="clockUnit"><b id="clockMinutes">--</b><span>MIN</span></div>
+          <i aria-hidden="true">:</i>
+          <div class="clockUnit"><b id="clockSeconds">--</b><span>SEC</span></div>
+        </div>
+        <p class="countdownDeadline"><span>마감</span><b id="deadlineValue">—</b></p>
+      </div>
+
+      <div class="heroActions">
+        <a class="buttonPrimary" href="#entrySection">응모하기 (목업)</a>
+        <a class="buttonGhost" href="#seasonSection">시즌 패턴 3종 보기</a>
+      </div>
+    </div>
+
+    <div class="heroShowcase">
+      <figure class="heroFrame">
+        <canvas id="dropHeroCanvas" width="880" height="1100" aria-label="선택한 시즌 패턴 미리보기"></canvas>
+        <figcaption class="heroPlate">
+          <span>NOW SELECTED</span>
+          <b id="heroSeasonName">—</b>
+          <em id="heroSeasonQuantity">—</em>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
 
   <section class="statusBand" id="statusBand" aria-live="polite">시즌 패턴을 렌더하는 중입니다.</section>
-
-  <div class="bannerFrame" aria-hidden="true">
-    <canvas id="dropBanner" width="1188" height="160"></canvas>
-  </div>
 
   <section class="dropMeta" aria-label="드랍 정보">
     <div><span>시즌</span><b>2026 S/S · NAïVIS SIGNATURE</b></div>
     <div><span>공개 패턴</span><b>3종 · L1 프로시저럴</b></div>
-    <div><span>수량</span><b id="quantityValue">—</b></div>
-    <div><span>응모 마감</span><b id="deadlineValue">—</b></div>
-    <div><span>남은 기간</span><b id="ddayValue">D-—</b></div>
+    <div><span>총 수량</span><b id="quantityValue">—</b></div>
+    <div><span>응모 방식</span><b>추첨 · 1인 최대 2점</b></div>
   </section>
 
-  <div class="dropGrid">
-    <section class="seasonPanel" aria-labelledby="seasonTitle">
-      <div class="panelHeader">
-        <div>
-          <p class="eyebrow">Season patterns · rendered by F-02 L1</p>
-          <h2 id="seasonTitle">시즌 패턴 공개</h2>
-        </div>
-        <span class="mockBadge">MOCK</span>
-      </div>
-      <div class="seasonGrid" id="seasonGrid" role="radiogroup" aria-labelledby="seasonTitle">
-        <p class="emptyState">시즌 패턴을 렌더하는 중입니다.</p>
-      </div>
-    </section>
+  <section class="ribbonSection" aria-label="시즌 패턴 이음매 없는 반복">
+    <div class="ribbonFrame">
+      <canvas id="dropBanner" width="1440" height="132" aria-hidden="true"></canvas>
+    </div>
+    <p class="ribbonNote"><b>SEAMLESS</b> 같은 타일이 이음매 없이 반복됩니다 — 원단·패키지 전개를 그대로 미리 볼 수 있는 구조입니다.</p>
+  </section>
 
-    <section class="entryPanel" aria-labelledby="entryTitle">
-      <div class="panelHeader">
-        <div>
-          <p class="eyebrow">Mock entry only</p>
-          <h2 id="entryTitle">드랍 응모</h2>
-        </div>
-        <span class="mockBadge">MOCK</span>
+  <section class="seasonSection" id="seasonSection" aria-labelledby="seasonTitle">
+    <div class="sectionHead">
+      <div>
+        <p class="eyebrow">Season patterns · rendered by F-02 L1</p>
+        <h2 id="seasonTitle">시즌 패턴 3종</h2>
       </div>
+      <p class="sectionNote">카드를 선택하면 히어로 패턴과 응모 폼의 대상이 함께 바뀝니다. 각 패턴은 마감일이 다릅니다.</p>
+    </div>
+    <div class="seasonGrid" id="seasonGrid" role="radiogroup" aria-labelledby="seasonTitle">
+      <p class="emptyState">시즌 패턴을 렌더하는 중입니다.</p>
+    </div>
+  </section>
+
+  <section class="entrySection" id="entrySection" aria-labelledby="entryTitle">
+    <div class="entryIntro">
+      <p class="eyebrow">Mock entry only <span class="mockBadge">MOCK</span></p>
+      <h2 id="entryTitle">드랍 응모</h2>
+      <p class="mockNotice">백엔드가 없는 F-07 목업 화면입니다. 제출해도 응모 접수, 추첨, 재고 차감, 결제가 일어나지 않습니다.</p>
+      <ol class="entrySteps">
+        <li><b>01</b><span>시즌 패턴을 고릅니다. 패턴마다 수량과 마감일이 다릅니다.</span></li>
+        <li><b>02</b><span>응모 정보를 입력하고 목업 확인 항목에 동의합니다.</span></li>
+        <li><b>03</b><span>제출하면 목업 접수 번호가 발급됩니다 — 저장되지 않습니다.</span></li>
+      </ol>
+    </div>
+
+    <div class="entryCard">
       <form class="entryForm" id="entryForm" novalidate>
-        <p class="mockNotice">백엔드가 없는 F-07 목업 화면입니다. 제출해도 응모 접수, 추첨, 재고 차감, 결제가 일어나지 않습니다.</p>
         <div class="selectedSeason">
           <span>선택한 시즌 패턴</span>
           <b id="selectedSeasonName">—</b>
+          <em id="selectedSeasonDeadline">—</em>
         </div>
         <label>
           <span>이름 또는 닉네임</span>
-          <input id="entryName" name="entryName" type="text" maxlength="40" autocomplete="name">
+          <input id="entryName" name="entryName" type="text" maxlength="40" autocomplete="name" placeholder="예: 나이비스">
         </label>
         <label>
           <span>연락처</span>
@@ -83,11 +131,33 @@
           <input id="entryConsent" name="entryConsent" type="checkbox">
           <span>이 화면이 데모 목업이며 실제 응모가 접수되지 않는다는 점을 확인했습니다.</span>
         </label>
-        <button class="submitButton" id="entrySubmit" type="submit">응모하기 (목업)</button>
+        <button class="buttonPrimary submitButton" id="entrySubmit" type="submit">응모하기 (목업)</button>
         <p class="formStatus" id="entryStatus" aria-live="polite"></p>
       </form>
-    </section>
-  </div>
+
+      <div class="entryDone" id="entryDone" tabindex="-1" hidden>
+        <p class="doneMark" aria-hidden="true">✓</p>
+        <p class="eyebrow">Mock entry received</p>
+        <h3>목업 응모가 접수된 화면입니다</h3>
+        <p class="doneNotice">실제 접수·추첨·재고 차감·결제는 일어나지 않았습니다. 아래 번호는 화면 시연용으로 즉석 생성된 값이며 저장되지 않습니다.</p>
+        <dl class="doneMeta">
+          <div><dt>시즌 패턴</dt><dd id="doneSeason">—</dd></div>
+          <div><dt>응모 수량</dt><dd id="doneQuantity">—</dd></div>
+          <div><dt>목업 접수번호</dt><dd id="doneTicket">—</dd></div>
+          <div><dt>마감</dt><dd id="doneDeadline">—</dd></div>
+        </dl>
+        <button class="buttonGhost" id="entryReset" type="button">다시 작성하기</button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="siteFooter">
+    <p><b>LIVING VISETOS</b> · E · F-07 한정판 드랍 목업</p>
+    <nav class="siteFooterNav" aria-label="다른 화면으로 이동">
+      <a href="/membership.html">멤버십 패턴 시그니처 →</a>
+      <a href="/">키오스크로 돌아가기 →</a>
+    </nav>
+  </footer>
 </main>
 <script type="module" src="/src/drop/main.ts"></script>
 </body>

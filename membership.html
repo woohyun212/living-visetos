@@ -8,19 +8,59 @@
 <link rel="preload" href="/assets/fonts/PretendardVariable.woff2" as="font" type="font/woff2" crossorigin>
 </head>
 <body>
-<main class="membershipShell" aria-labelledby="membershipTitle">
-  <header class="membershipHero">
-    <div>
-      <p class="eyebrow">E · F-08</p>
-      <h1 id="membershipTitle">멤버십 패턴 시그니처</h1>
-      <p class="heroCopy">체험으로 태어난 패턴을 계정의 시그니처로 저장하고, 재방문할 때마다 같은 씨앗에서 조금씩 자라게 하는 컨셉 화면입니다. 아래 회차별 패턴은 같은 FeatureSeed에 sessionId만 바꿔 F-02 L1 엔진으로 실제 렌더한 결과입니다.</p>
-    </div>
-    <nav class="heroLinks" aria-label="다른 화면으로 이동">
-      <span class="conceptBadge">CONCEPT</span>
-      <a class="pillLink" href="/drop.html">한정판 드랍</a>
-      <a class="pillLink" href="/">키오스크로 돌아가기</a>
+<a class="skipLink" href="#membershipMain">본문으로 건너뛰기</a>
+
+<!-- 사이트 헤더 — drop.html 과 동일한 마크업·클래스를 공유한다(스타일은 각 페이지 CSS에 같은 값으로 복제). -->
+<header class="siteBar">
+  <div class="siteBarInner">
+    <a class="siteMark" href="/">
+      <b>LIVING VISETOS</b>
+      <span>키오스크 데모 · 2026</span>
+    </a>
+    <nav class="siteNav" aria-label="주요 화면">
+      <a class="siteNavLink" href="/drop.html">한정판 드랍</a>
+      <a class="siteNavLink is-active" href="/membership.html" aria-current="page">멤버십</a>
+      <a class="siteNavLink" href="/">키오스크</a>
     </nav>
-  </header>
+  </div>
+</header>
+
+<main id="membershipMain" class="membershipShell" aria-labelledby="membershipTitle">
+  <section class="memberHero">
+    <div class="heroCopy">
+      <p class="eyebrow">E · F-08 <span class="conceptBadge">CONCEPT</span></p>
+      <h1 id="membershipTitle">재방문할 때마다<br>패턴이 자랍니다</h1>
+      <p class="heroLead">체험으로 태어난 패턴을 계정의 시그니처로 저장하고, 다시 올 때마다 <b>같은 씨앗에서</b> 조금씩 다른 변주를 꺼냅니다. 아래 회차별 패턴은 같은 FeatureSeed에 sessionId만 바꿔 F-02 L1 엔진으로 실제 렌더한 결과입니다.</p>
+
+      <dl class="heroStats">
+        <div><dt>회원 ID</dt><dd id="memberIdValue">—</dd></div>
+        <div><dt>가입</dt><dd id="memberSinceValue">—</dd></div>
+        <div><dt>누적 체험</dt><dd id="visitCountValue">—</dd></div>
+      </dl>
+
+      <div class="heroActions">
+        <a class="buttonPrimary" href="#evolutionSection">회차별 진화 보기</a>
+        <a class="buttonGhost" href="/drop.html">한정판 드랍</a>
+      </div>
+    </div>
+
+    <div class="heroShowcase">
+      <div class="heroStack" aria-label="1·2·3회차 시그니처가 쌓인 모습">
+        <figure class="stackItem stackItem--back">
+          <canvas id="stackCanvas1" width="512" height="512" aria-label="1회차 시그니처"></canvas>
+          <figcaption>1회차</figcaption>
+        </figure>
+        <figure class="stackItem stackItem--mid">
+          <canvas id="stackCanvas2" width="512" height="512" aria-label="2회차 시그니처"></canvas>
+          <figcaption>2회차</figcaption>
+        </figure>
+        <figure class="stackItem stackItem--front">
+          <canvas id="stackCanvas3" width="512" height="512" aria-label="3회차 시그니처 — 현재"></canvas>
+          <figcaption>3회차 · 현재</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
 
   <section class="statusBand" id="statusBand" aria-live="polite">회차별 시그니처를 렌더하는 중입니다.</section>
 
@@ -42,18 +82,52 @@
     </article>
   </section>
 
-  <section class="evolutionPanel" aria-labelledby="evolutionTitle">
-    <div class="panelHeader">
+  <section class="evolutionSection" id="evolutionSection" aria-labelledby="evolutionTitle">
+    <div class="sectionHead">
       <div>
-        <p class="eyebrow">Rendered by F-02 L1 · same seed, new sessionId</p>
+        <p class="eyebrow">Rendered by F-02 L1 · same seed, new sessionId <span class="conceptBadge">CONCEPT</span></p>
         <h2 id="evolutionTitle">회차별 패턴 진화</h2>
       </div>
-      <span class="conceptBadge">CONCEPT</span>
+      <p class="sectionNote">아래로 내려가면 1 → 2 → 3회차가 차례로 나옵니다. 각 회차에서 <b>무엇이 달라졌는지</b>를 한 줄로 표시합니다.</p>
     </div>
-    <div class="evolutionTrack" id="evolutionTrack">
-      <p class="emptyState">회차별 시그니처를 렌더하는 중입니다.</p>
+
+    <div class="evolutionBody">
+      <ol class="stageList" id="evolutionTrack">
+        <li class="emptyState">회차별 시그니처를 렌더하는 중입니다.</li>
+      </ol>
     </div>
+
     <p class="panelNote">세 화면은 dominantColors·motionEnergy·rhythm이 완전히 같고 sessionId만 다릅니다. F-02 문법상 sessionId는 스타일 구간을 뒤집지 않고 모티프 실루엣·강조 배치·위상만 바꾸기 때문에, 회차가 쌓여도 "내 패턴"이라는 정체성이 유지됩니다.</p>
+  </section>
+
+  <section class="perkSection" aria-labelledby="perkTitle">
+    <div class="sectionHead">
+      <div>
+        <p class="eyebrow">Membership perks <span class="conceptBadge">CONCEPT</span></p>
+        <h2 id="perkTitle">멤버십 혜택 컨셉</h2>
+      </div>
+      <p class="sectionNote">아래 세 가지는 F-08 컨셉 제안입니다. 정산·배송·계정 시스템은 데모 스코프 밖입니다.</p>
+    </div>
+    <div class="perkGrid">
+      <article class="perkCard">
+        <p class="perkIndex">01</p>
+        <h3>시그니처 보관</h3>
+        <p>회차마다 만들어진 타일과 인증 메타(seedRef·모티프 밀도·팔레트)가 계정에 남습니다. 지난 회차 패턴도 언제든 다시 꺼내 굿즈로 전개할 수 있습니다.</p>
+        <p class="perkFoot">보관 대상 · 타일 · seedRef · 팔레트</p>
+      </article>
+      <article class="perkCard">
+        <p class="perkIndex">02</p>
+        <h3>회차 한정 변주</h3>
+        <p>방문 회차마다 그 회차에서만 나오는 변주가 발급됩니다. 같은 계보 안에 있지만 두 번 다시 같은 조합이 나오지 않아, 회차 자체가 수집 단위가 됩니다.</p>
+        <p class="perkFoot">발급 단위 · 방문 1회 = 변주 1종</p>
+      </article>
+      <article class="perkCard">
+        <p class="perkIndex">03</p>
+        <h3>드랍 우선 응모</h3>
+        <p>시그니처를 보유한 회원에게 시즌 드랍을 먼저 엽니다. 내 패턴 계보와 가까운 시즌 패턴을 추천해 응모 동선을 짧게 만듭니다.</p>
+        <p class="perkFoot"><a href="/drop.html">F-07 한정판 드랍 보기 →</a></p>
+      </article>
+    </div>
   </section>
 
   <section class="signaturePanel" aria-labelledby="signatureTitle">
@@ -66,15 +140,13 @@
     </div>
     <div class="signatureBody">
       <div class="signatureFrame">
-        <canvas id="signatureCanvas" width="512" height="512"></canvas>
+        <canvas id="signatureCanvas" width="512" height="512" aria-label="현재 계정 시그니처"></canvas>
       </div>
       <div class="signatureSide">
         <div class="signatureMeta">
-          <div><span>회원 ID</span><b id="memberIdValue">—</b></div>
-          <div><span>가입</span><b id="memberSinceValue">—</b></div>
-          <div><span>누적 체험</span><b id="visitCountValue">—</b></div>
           <div><span>현재 시그니처</span><b id="signatureSeedValue">—</b></div>
           <div><span>모티프 밀도</span><b id="signatureDensityValue">—</b></div>
+          <div><span>누적 체험</span><b id="signatureVisitValue">—</b></div>
           <div>
             <span>팔레트</span>
             <div class="paletteRow" id="signaturePalette"></div>
@@ -92,6 +164,14 @@
       </div>
     </div>
   </section>
+
+  <footer class="siteFooter">
+    <p><b>LIVING VISETOS</b> · E · F-08 멤버십 패턴 시그니처 컨셉</p>
+    <nav class="siteFooterNav" aria-label="다른 화면으로 이동">
+      <a href="/drop.html">한정판 드랍 →</a>
+      <a href="/">키오스크로 돌아가기 →</a>
+    </nav>
+  </footer>
 </main>
 <script type="module" src="/src/membership/main.ts"></script>
 </body>
