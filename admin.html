@@ -8,65 +8,79 @@
 <link rel="preload" href="/assets/fonts/PretendardVariable.woff2" as="font" type="font/woff2" crossorigin>
 </head>
 <body>
-<main class="adminShell" aria-labelledby="adminTitle">
-  <header class="adminHero">
-    <div>
-      <p class="eyebrow">D · F-09</p>
-      <h1 id="adminTitle">운영 결과 대시보드</h1>
-      <p class="heroCopy">업로드가 완료된 Supabase 결과와 연결된 F-06 목업 주문을 확인하는 화이트/차콜 운영 화면입니다.</p>
-    </div>
-    <nav class="adminLinks" aria-label="다른 화면으로 이동">
-      <a class="kioskLink" href="/drop.html">F-07 한정판 드랍 (목업)</a>
-      <a class="kioskLink" href="/membership.html">F-08 멤버십 시그니처 (컨셉)</a>
-      <a class="kioskLink" href="/">키오스크로 돌아가기</a>
-    </nav>
-  </header>
+<a class="skipLink" href="#resultsPanel">본문으로 건너뛰기</a>
 
-  <section class="filterPanel" aria-label="결과 조회 필터">
-    <label class="tokenField" for="adminToken">
-      <span>운영 토큰</span>
-      <input id="adminToken" type="password" autocomplete="off" placeholder="RESULT_ADMIN_TOKEN">
-    </label>
-    <label class="searchField" for="codeSearch">
-      <span>세션 코드 조회</span>
-      <input id="codeSearch" type="search" autocomplete="off" placeholder="ABCD-1234" spellcheck="false">
-    </label>
-    <div class="filterActions">
-      <button class="filterPill" id="searchButton" type="button">상세 조회</button>
-      <button class="outlineControl" id="refreshButton" type="button">목록 새로고침</button>
+<header class="topBar">
+  <div class="topBarInner">
+    <div class="brand">
+      <span class="brandMark" aria-hidden="true">LV</span>
+      <span class="brandText">
+        <b>운영 대시보드</b>
+        <i>F-09 · Living Visetos</i>
+      </span>
     </div>
+
+    <div class="topControls">
+      <label class="field field--token" for="adminToken">
+        <span class="fieldLabel">운영 토큰</span>
+        <input id="adminToken" type="password" autocomplete="off" placeholder="RESULT_ADMIN_TOKEN" spellcheck="false">
+      </label>
+      <label class="field field--code" for="codeSearch">
+        <span class="fieldLabel">세션 코드</span>
+        <input id="codeSearch" type="search" autocomplete="off" placeholder="ABCD-1234" spellcheck="false">
+      </label>
+      <div class="topActions">
+        <button class="btn btn--primary" id="searchButton" type="button">상세 조회</button>
+        <button class="btn" id="refreshButton" type="button">새로고침</button>
+      </div>
+    </div>
+
+    <nav class="topLinks" aria-label="다른 화면으로 이동">
+      <a href="/drop.html">F-07 드랍</a>
+      <a href="/membership.html">F-08 멤버십</a>
+      <a href="/">키오스크</a>
+    </nav>
+  </div>
+  <p class="statusBand" id="statusBand" role="status" aria-live="polite">운영 토큰을 입력하면 최근 결과를 불러옵니다.</p>
+</header>
+
+<main class="workspace">
+  <section class="panel panel--list" id="resultsPanel" aria-labelledby="listTitle">
+    <div class="panelHead">
+      <div class="panelTitle">
+        <h2 id="listTitle">최근 결과</h2>
+        <span class="countChip" id="resultCount" hidden></span>
+      </div>
+      <div class="pager">
+        <span class="pagerRange" id="pagerRange" aria-live="polite"></span>
+        <button class="btn btn--icon" id="prevButton" type="button" aria-label="이전 페이지">←</button>
+        <button class="btn btn--icon" id="nextButton" type="button" aria-label="다음 페이지">→</button>
+      </div>
+    </div>
+    <div class="tableHead" aria-hidden="true">
+      <span>코드</span>
+      <span>패턴</span>
+      <span>발급 시각</span>
+      <span>에셋</span>
+      <span>주문</span>
+    </div>
+    <div class="tableBody" id="resultList" role="list"></div>
   </section>
 
-  <section class="statusBand" id="statusBand" aria-live="polite">최근 결과를 불러오는 중입니다.</section>
-
-  <div class="dashboardGrid">
-    <section class="resultsPanel" aria-labelledby="listTitle">
-      <div class="panelHeader">
-        <div>
-          <p class="eyebrow">Uploaded Supabase records</p>
-          <h2 id="listTitle">최근 결과</h2>
-        </div>
-        <div class="pagerControls" aria-label="페이지 이동">
-          <button class="outlineControl" id="prevButton" type="button">이전</button>
-          <button class="outlineControl" id="nextButton" type="button">다음</button>
-        </div>
+  <section class="panel panel--detail" aria-labelledby="detailTitle">
+    <div class="panelHead">
+      <div class="panelTitle">
+        <h2 id="detailTitle">선택 결과</h2>
+        <span class="countChip countChip--ghost" id="detailCode" hidden></span>
       </div>
-      <div class="resultList" id="resultList"></div>
-    </section>
-
-    <section class="detailPanel" aria-labelledby="detailTitle">
-      <div class="panelHeader">
-        <div>
-          <p class="eyebrow">Result detail</p>
-          <h2 id="detailTitle">선택 결과</h2>
-        </div>
-      </div>
-      <div class="detailContent" id="detailContent">
-        <p class="emptyState">왼쪽 목록에서 결과를 선택하거나 세션 코드를 입력하세요.</p>
-      </div>
-    </section>
-  </div>
+      <span class="ttlChip" id="ttlChip" hidden></span>
+    </div>
+    <div class="detailBody" id="detailContent"></div>
+  </section>
 </main>
+
+<div class="toastStack" id="toastStack" aria-live="assertive" aria-atomic="true"></div>
+
 <script type="module" src="/src/admin/main.ts"></script>
 </body>
 </html>
