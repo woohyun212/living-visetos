@@ -27,7 +27,8 @@ Vercel Functions는 루트 `api/` 폴더를 함수로 배포하므로 실제 업
 
 Supabase에는 `results` 버킷과 `results` 테이블이 필요하다. 테이블은 최소한
 `code`, `session_id`, `pattern_name`, `issued_at`, `tile_meta`, `video_path`,
-`poster_path` 컬럼을 가진다.
+`poster_path` 컬럼을 가진다. `code`는 결과 URL과 Storage object prefix의 기준이므로
+unique 제약을 둔다.
 
 ## F-06 Public Result + Mock Order
 
@@ -75,10 +76,11 @@ GET 엔드포인트:
 F-09 환경과 보안:
 
 - `SUPABASE_SERVICE_ROLE_KEY`는 Vercel Function 내부에서만 사용하고 클라이언트로 내려보내지 않는다.
-- F-09 운영 GET은 `Authorization: Bearer <RESULT_ADMIN_TOKEN>`이 필요하다. 운영자는 `/admin.html`의 운영 토큰 필드에 값을 입력하며, 토큰은 브라우저 `sessionStorage`에만 보관된다.
+- F-09 운영 GET은 `Authorization: Bearer <RESULT_ADMIN_TOKEN>`이 필요하다. 운영자는 `/admin.html`의 운영 토큰 필드에 매번 값을 입력하며, 토큰은 브라우저 저장소에 보관하지 않는다.
 - F-05 `POST /api/results`는 현장 키오스크 업로드 계약을 유지하기 위해 `RESULT_ADMIN_TOKEN`을 요구하지 않는다.
 - F-05 POST는 `video/mp4`, `video/webm`, `image/png`, `image/jpeg`만 받고 video/poster 용량을 제한한다.
-- API에는 함수 인스턴스 단위의 기본 rate limit이 있으며, 운영 배포에서는 Vercel/WAF 같은 플랫폼 rate limit을 추가로 적용한다.
+- API에는 함수 인스턴스 단위의 기본 rate limit이 있으며, 공개 결과 조회와 운영 조회는 별도 버킷을 쓴다. 운영 배포에서는 Vercel/WAF 같은 플랫폼 rate limit을 추가로 적용한다.
+- `api/results.ts`, `api/orders.ts`는 Vite 로컬 미들웨어의 Web `Request`와 Vercel Node `req/res` 호출을 모두 처리하는 callable default handler로 노출한다.
 - 상세 응답의 `videoUrl`, `posterUrl`은 서버가 Supabase Storage REST
   `POST /storage/v1/object/sign/{bucket}/{path}`로 발급한 signed URL이다.
 - `RESULT_ASSET_URL_TTL_SECONDS`가 없으면 signed URL TTL은 3600초다.

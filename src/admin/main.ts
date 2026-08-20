@@ -1,7 +1,6 @@
 import './style.css';
 
 const PAGE_LIMIT = 20;
-const ADMIN_TOKEN_STORAGE_KEY = 'living-visetos:admin-token:v1';
 
 type ResultSummary = {
   code: string;
@@ -65,8 +64,6 @@ const nextButton = getElement<HTMLButtonElement>('nextButton');
 let offset = 0;
 let hasMore = false;
 let selectedCode = '';
-
-adminToken.value = sessionStorage.getItem(ADMIN_TOKEN_STORAGE_KEY) ?? '';
 
 function setStatus(message: string): void {
   statusBand.textContent = message;
@@ -220,6 +217,15 @@ async function loadDetail(code: string): Promise<void> {
   }
 }
 
+async function searchDetailAndRefreshList(): Promise<void> {
+  const normalized = normalizeCode(codeSearch.value);
+  if (normalized) {
+    await loadDetail(normalized);
+  }
+
+  await loadList(0);
+}
+
 function renderDetail(result: ResultDetail, orders: OrderSummary[]): void {
   detailContent.replaceChildren();
 
@@ -331,23 +337,14 @@ function productOptionLabel(value: string): string {
   return value;
 }
 
-searchButton.addEventListener('click', () => void loadDetail(codeSearch.value));
+searchButton.addEventListener('click', () => void searchDetailAndRefreshList());
 refreshButton.addEventListener('click', () => void loadList(0));
 prevButton.addEventListener('click', () => void loadList(Math.max(0, offset - PAGE_LIMIT)));
 nextButton.addEventListener('click', () => void loadList(offset + PAGE_LIMIT));
 codeSearch.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') {
-    void loadDetail(codeSearch.value);
+    void searchDetailAndRefreshList();
   }
-});
-adminToken.addEventListener('input', () => {
-  const token = adminToken.value.trim();
-  if (token) {
-    sessionStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, token);
-    return;
-  }
-
-  sessionStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
 });
 adminToken.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') {
@@ -355,5 +352,5 @@ adminToken.addEventListener('keydown', (event) => {
   }
 });
 
-setBusy(true);
-void loadList(0);
+setBusy(false);
+setStatus('운영 토큰을 입력한 뒤 목록 새로고침 또는 상세 조회를 실행하세요.');

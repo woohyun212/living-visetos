@@ -216,10 +216,14 @@ async function runDeliver(patternName: string): Promise<void> {
   setOverlay(true);
 
   btn.disabled = true;
-  setDelivery(`${CLIP_SECONDS}초 동안 실루엣 오버레이를 녹화하고 전송합니다.`, '처리 중');
-  setStatus('결과 녹화/전송 중입니다. 잠시만 기다려주세요.');
+  setDelivery('첫 실루엣 마스크 프레임을 준비한 뒤 녹화를 시작합니다.', '처리 중');
+  setStatus('오버레이 첫 마스크 프레임을 준비하는 중입니다.');
 
   try {
+    await overlay.ensureRunningAndWaitForFrame();
+    setDelivery(`${CLIP_SECONDS}초 동안 실루엣 오버레이를 녹화하고 전송합니다.`, '처리 중');
+    setStatus('결과 녹화/전송 중입니다. 잠시만 기다려주세요.');
+
     const pkg = await record(overlayCanvas, {
       sessionId: session.id,
       patternName,

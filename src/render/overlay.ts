@@ -12,6 +12,7 @@ import type { PatternTile } from '../contracts.ts';
 import type { Segmenter } from '../vision/segmenter.ts';
 
 const PATTERN_SCALE = 0.35; // 실루엣 위 타일 반복 크기
+const FIRST_FRAME_TIMEOUT_MS = 8000; // 녹화 게이트: 첫 마스크 프레임 대기 상한
 
 const VERTEX_SHADER = `
   varying vec2 vUv;
@@ -52,8 +53,10 @@ const FRAGMENT_SHADER = `
 
 export class OverlayLayer {
   private running = false;
-  //private tile: PatternTile | null = null;
   private patternTexture: THREE.Texture | null = null;
+  /** 녹화 게이트(F-05): 렌더된 프레임 수·대기자 — 첫 프레임 전 캡처(투명 포스터)를 막는다 */
+  private renderedFrameCount = 0;
+  private readonly frameWaiters = new Set<() => void>();
 
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene: THREE.Scene;
@@ -152,6 +155,33 @@ export class OverlayLayer {
     void this.loop();
   }
 
+  /** 오버레이를 켜고(이미 켜져 있으면 그대로) 다음 렌더 프레임까지 기다린다 — 녹화·포스터 캡처 전 게이트. */
+  ensureRunningAndWaitForFrame(timeoutMs = FIRST_FRAME_TIMEOUT_MS): Promise<void> {
+    const frameReady = this.waitForFrame(timeoutMs);
+    this.start();
+    return frameReady;
+  }
+
+  waitForFrame(timeoutMs = FIRST_FRAME_TIMEOUT_MS): Promise<void> {
+    const frameCount = this.renderedFrameCount;
+
+    return new Promise((resolve, reject) => {
+      const done = () => {
+        if (this.renderedFrameCount <= frameCount) {
+          return;
+        }
+        globalThis.clearTimeout(timeout);
+        this.frameWaiters.delete(done);
+        resolve();
+      };
+      const timeout = globalThis.setTimeout(() => {
+        this.frameWaiters.delete(done);
+        reject(new Error('Overlay first mask frame was not ready in time.'));
+      }, timeoutMs);
+      this.frameWaiters.add(done);
+    });
+  }
+
   stop(): void {
     this.running = false;
   }
@@ -199,6 +229,7 @@ export class OverlayLayer {
 
       // Shader → Plane → Scene을 실제 overlayCanvas에 그림
       this.renderer.render(this.scene, this.camera);
+      this.notifyFrameRendered();
     } else {
       this.renderer.clear();
     }
@@ -208,4 +239,12 @@ export class OverlayLayer {
 
   this.renderer.clear();
 }
+
+  private notifyFrameRendered(): void {
+    this.renderedFrameCount += 1;
+    for (const resolve of this.frameWaiters) {
+      resolve();
+    }
+    this.frameWaiters.clear();
+  }
 }

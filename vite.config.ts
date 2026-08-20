@@ -32,9 +32,9 @@ function installLocalResultMiddlewares(server: LocalMiddlewareServer): void {
   server.middlewares.use('/api/results', async (request, response) => {
     try {
       const api = await import('./api/results.ts');
-      await sendWebResponse(response, await api.default.fetch(
+      await sendWebResponse(response, await api.default(
         toWebRequest(request as unknown as LocalApiRequest, '/api/results'),
-      ));
+      ) as Response);
     } catch (error) {
       sendLocalApiFailure(response, 'Local results API failed.', error);
     }
@@ -43,9 +43,9 @@ function installLocalResultMiddlewares(server: LocalMiddlewareServer): void {
   server.middlewares.use('/api/orders', async (request, response) => {
     try {
       const api = await import('./api/orders.ts');
-      await sendWebResponse(response, await api.default.fetch(
+      await sendWebResponse(response, await api.default(
         toWebRequest(request as unknown as LocalApiRequest, '/api/orders'),
-      ));
+      ) as Response);
     } catch (error) {
       sendLocalApiFailure(response, 'Local orders API failed.', error);
     }
