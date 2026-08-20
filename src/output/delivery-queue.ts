@@ -400,7 +400,7 @@ async function markAttempt(entry: PendingResultEntry): Promise<void> {
   try {
     await putPendingResult({
       ...entry,
-      attempts: entry.attempts + 1,
+      attempts: (entry.attempts ?? 0) + 1, // 구버전(hotfix) 항목에는 이 칸이 없다
       lastAttemptAt: new Date().toISOString(),
     });
   } catch {

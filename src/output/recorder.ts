@@ -15,15 +15,13 @@ const RESULT_UPLOAD_ENDPOINT = '/api/results';
 
 /** 세로 캔버스를 뜨는 속도. 30fps 면 무대의 연출을 다 담고 8초 클립도 25MB 한도 안에 든다. */
 const PORTRAIT_FPS = 30;
-/** timeslice — 첫 조각이 오는지로 '조용히 죽은 인코더' 를 빨리 잡아낸다. */
-const RECORDER_TIMESLICE_MS = 1000;
 /*
- * 첫 조각 대기 상한. 넘으면 이 후보를 버리고 다음 후보로 간다.
- * mp4 muxer 는 init 조각(수백 바이트)을 늦게 흘린다 — 1080×1920 headless 실측 3.4초.
- * webm(vp9)은 1.0초. 6초는 그 사이를 넉넉히 덮으면서도, 진짜 죽은 인코더에 8초를
- * 통째로 버리지 않는 선이다(ADR-007 의 mp4 우선을 시간 제한으로 깨뜨리지 않기 위함).
+ * timeslice 는 쓰지 않는다. mp4 muxer 에 timeslice 를 주면 init 조각 + 프래그먼트(fMP4)로
+ * 쪼개져 나오는데, 그것을 이어 붙인 파일의 재생 보장은 이 자리에서 확인할 수 없다 —
+ * ADR-007 이 mp4 를 앞세우는 이유가 바로 iOS 사파리이기 때문에 컨테이너를 바꾸지 않는다.
+ * start() 한 번, stop() 에서 자기완결적 blob 한 장. 인코더 거부는 아래 네 갈래로 잡는다:
+ *   생성 예외 · start() 예외 · 데이터 전 error 이벤트 · 데이터 없이 끝난 stop.
  */
-const FIRST_CHUNK_TIMEOUT_MS = 6000;
 /** 포스터를 PNG 로 유지할 상한(서버 RESULT_UPLOAD_MAX_POSTER_BYTES=2MB). 넘으면 JPEG 로 다시 뜬다. */
 const POSTER_PNG_MAX_BYTES = 1_600_000;
 const POSTER_JPEG_QUALITY = 0.9;
@@ -273,7 +271,6 @@ function runRecorder(
     const chunks: Blob[] = [];
     let settled = false;
     let stopTimer = 0;
-    let firstChunkTimer = 0;
 
     const settle = (callback: () => void): void => {
       if (settled) {
@@ -281,7 +278,6 @@ function runRecorder(
       }
       settled = true;
       globalThis.clearTimeout(stopTimer);
-      globalThis.clearTimeout(firstChunkTimer);
       callback();
     };
 
@@ -301,7 +297,6 @@ function runRecorder(
     recorder.addEventListener('dataavailable', (event: BlobEvent) => {
       if (event.data.size > 0) {
         chunks.push(event.data);
-        globalThis.clearTimeout(firstChunkTimer);
       }
     });
 
@@ -325,7 +320,7 @@ function runRecorder(
     });
 
     try {
-      recorder.start(RECORDER_TIMESLICE_MS);
+      recorder.start();
     } catch (error) {
       abort(
         error instanceof Error ? error.message : 'MediaRecorder could not start.',
@@ -333,11 +328,6 @@ function runRecorder(
       );
       return;
     }
-
-    firstChunkTimer = globalThis.setTimeout(
-      () => abort('MediaRecorder produced no data in time.', true),
-      FIRST_CHUNK_TIMEOUT_MS,
-    );
 
     stopTimer = globalThis.setTimeout(() => {
       if (recorder.state !== 'inactive') {
