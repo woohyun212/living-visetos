@@ -37,6 +37,9 @@ export default {
       const video = requireFile(form, 'video');
       const posterImage = requireFile(form, 'posterImage');
       const safeCode = code.replace(/[^A-Z0-9-]/gi, '').toUpperCase();
+      if (!safeCode) {
+        return json({ error: 'Missing result code.' }, 400);
+      }
       const videoPath = `${safeCode}/clip.${extensionFor(video, 'webm')}`;
       const posterPath = `${safeCode}/poster.${extensionFor(posterImage, 'png')}`;
 
@@ -104,7 +107,6 @@ async function uploadToStorage(path: string, file: File): Promise<void> {
         authorization: `Bearer ${serviceKey}`,
         apikey: serviceKey,
         'content-type': file.type || 'application/octet-stream',
-        'x-upsert': 'true',
       },
       body: file,
     },
@@ -123,7 +125,6 @@ async function insertResultRecord(record: ResultRecord): Promise<void> {
       authorization: `Bearer ${serviceKey}`,
       apikey: serviceKey,
       'content-type': 'application/json',
-      prefer: 'resolution=merge-duplicates',
     },
     body: JSON.stringify(record),
   });

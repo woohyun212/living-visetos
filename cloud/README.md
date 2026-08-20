@@ -22,4 +22,5 @@ Vercel Functions는 루트 `api/` 폴더를 함수로 배포하므로 실제 업
 
 Supabase에는 `results` 버킷과 `results` 테이블이 필요하다. 테이블은 최소한
 `code`, `session_id`, `pattern_name`, `issued_at`, `tile_meta`, `video_path`,
-`poster_path` 컬럼을 가진다.
+`poster_path` 컬럼을 가진다. `code`는 결과 URL과 Storage object prefix의 기준이므로
+unique 제약을 둔다.
