@@ -48,7 +48,7 @@ npm ci && npm run dev        # http://localhost:5173  ← 관객용 무대 (카�
 ```
 
 - `/?debug=1` — 모듈별 디버그 계기판 (버튼 1개 = 모듈 1개 = 계약 핸드오프 1개)
-- `/admin.html` — 운영 대시보드 · `/drop.html` `/membership.html` — F-07/08
+- `/admin.html` — 운영 대시보드 · `/drop.html` 한정판 드랍 · `/membership.html` 멤버십 컨셉
 - `/?mockCamera=1` — 카메라 없이 여정 완주 (개발 전용)
 - 검증: `npm run typecheck && npm test && npm run build` (CI가 모든 push·PR에서 동일하게 실행)
 
@@ -77,7 +77,7 @@ api/          결과·주문 API (자체 서버·Vercel 겸용 웹 핸들러)
 | [`docs/DEV_SETUP.md`](docs/DEV_SETUP.md) | 모듈 분담 · 협업 규칙 · 걷는 스켈레톤 킥오프 |
 | [`docs/OPERATIONS.md`](docs/OPERATIONS.md) | 현장 운영 · 단축키 · 폴백 영상 준비 |
 | [`docs/skeleton_v0.html`](docs/skeleton_v0.html) | 이 리포가 태어난 v0 걷는 스켈레톤 (단일 파일 실행 가능) |
-| [`DESIGN.md`](DESIGN.md) | 웹 서피스 디자인 토큰 (무대는 비세토스 무드 별도 트랙) |
+| [`docs/DESIGN.md`](docs/DESIGN.md) | 웹 서피스 디자인 토큰 (무대는 비세토스 무드 별도 트랙) |
 
 **스택**: Vite + TypeScript(프레임워크 无) · three.js · MediaPipe tasks-vision(로컬 번들) · MediaRecorder · Supabase · Node 22 자체 서버 + CloudFront
 
@@ -87,11 +87,11 @@ api/          결과·주문 API (자체 서버·Vercel 겸용 웹 핸들러)
 
 | 모듈 | 담당 |
 | --- | --- |
-| A 비전·캡처 (F-01) | PO |
-| B 패턴 엔진 (F-02) | 팀원① |
-| C-1 오버레이 (F-03) | 팀원② |
-| C-2 3D 가방 (F-04) | 팀원③ |
-| D 결과물·웹 (F-05·06·09) | 팀원④ |
+| A 비전·캡처 (F-01) | [@woohyun212](https://github.com/woohyun212) (PO) |
+| B 패턴 엔진 (F-02) | [@unknownamed](https://github.com/unknownamed) |
+| C-1 오버레이 (F-03) | [@jiyeon-BB](https://github.com/jiyeon-BB) |
+| C-2 3D 가방 (F-04) | [@tnflawkd3494-web](https://github.com/tnflawkd3494-web) |
+| D 결과물·웹 (F-05·06·09) | [@khw04](https://github.com/khw04) |
 | E 앱셸·무대·운영 | 공동 |
 
 *걷는 스켈레톤 → 계약 → 모듈 교체식으로 8일간 개발. main은 언제나 데모 가능 상태를 유지했습니다.*
