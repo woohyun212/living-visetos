@@ -8,6 +8,50 @@
 - 결과 페이지: 정적 호스팅
 - 목업 주문: Supabase REST `orders` 테이블에 저장하는 데모 전용 기록
 
+## Vercel 배포 절차
+
+정적 번들과 `api/` 함수를 한 프로젝트로 배포한다. 저장소 루트가 프로젝트 루트다.
+
+1. `vercel link` — 기존 프로젝트에 연결하거나 새로 만든다. Framework Preset은 Vite,
+   Build Command는 `npm run build`, Output Directory는 `dist`다 (`package.json`의 `build`는
+   `tsc && vite build`).
+2. `vercel env add <NAME> production` (그리고 필요하면 `preview`) 로 아래 환경변수를 넣는다.
+   `SUPABASE_SERVICE_ROLE_KEY`와 `RESULT_ADMIN_TOKEN`은 절대 `VITE_` 접두사를 붙이지 않는다 —
+   붙이면 클라이언트 번들에 인라인된다.
+   - 필수: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESULT_PUBLIC_BASE_URL`, `RESULT_ADMIN_TOKEN`
+   - 선택: `SUPABASE_RESULTS_BUCKET`, `RESULT_ASSET_URL_TTL_SECONDS`,
+     `RESULT_UPLOAD_MAX_VIDEO_BYTES`, `RESULT_UPLOAD_MAX_POSTER_BYTES`,
+     `RESULT_UPLOAD_RATE_LIMIT`, `RESULT_PUBLIC_RATE_LIMIT`, `RESULT_UNAUTH_RATE_LIMIT`,
+     `RESULT_ADMIN_RATE_LIMIT`, `ORDER_RATE_LIMIT`
+3. `vercel build` 로 로컬 산출물(`.vercel/output`)을 만들어 함수가 잡히는지 확인하고,
+   `vercel deploy --prebuilt` 또는 `vercel --prod` 로 배포한다.
+4. 배포 후 `RESULT_PUBLIC_BASE_URL`을 실제 배포 도메인으로 맞춘다. 이 값이 틀리면
+   업로드 응답의 QR 링크가 다른 도메인을 가리킨다.
+5. `vercel.json`의 rewrite가 `/results/:code` → `/result.html`을 담당한다. 로컬 dev 서버는
+   `vite.config.ts`의 미들웨어가 같은 rewrite를 제공한다.
+
+### 함수 시그니처 규약
+
+Vercel Node 런타임이 `api/`에서 인정하는 형태는 세 가지다 (공식 문서 기준):
+
+- **Web Handler — 메서드별 named export**: `export function GET(request: Request)` /
+  `export function POST(request: Request)`
+  ([Functions API Reference § Function signature](https://vercel.com/docs/functions/functions-api-reference#function-signature))
+- **`fetch` Web Standard export**: `export default { fetch(request: Request) {...} }`
+  ([Functions API Reference § fetch Web Standard](https://vercel.com/docs/functions/functions-api-reference#fetch-web-standard),
+  [Node.js 런타임 § Create a Node.js function in /api](https://vercel.com/docs/functions/runtimes/node-js))
+- **Node `(request, response)` 핸들러**: `export default (request, response) => {...}`
+  ([Node.js 런타임 § Node.js request and response objects](https://vercel.com/docs/functions/runtimes/node-js))
+
+`api/results.ts`와 `api/orders.ts`는 이 중 **Web Handler named export(`GET`/`POST`)** 를
+배포 진입점으로 노출하고, 동시에 `Request` 1-인자 호출과 Node `(req, res)` 호출을 모두 받는
+callable `default` export를 유지한다. `default`가 필요한 이유는 `vite.config.ts`의 로컬
+미들웨어가 `api.default(webRequest)`로 직접 호출하기 때문이고, 어느 형태가 선택되든 세 경로 모두
+같은 `handleRequest(request: Request)`로 수렴하므로 동작이 갈라지지 않는다.
+
+> 이 저장소에는 Vercel 계정과 CLI가 없어 `vercel build` 산출물 검증은 하지 못했다.
+> 위 규약은 공식 문서 근거이며, 실배포 전에 `vercel build` 한 번으로 함수 인식 여부를 확인할 것.
+
 ## F-05 Result API
 
 Vercel Functions는 루트 `api/` 폴더를 함수로 배포하므로 실제 업로드 엔드포인트는
@@ -24,6 +68,28 @@ Vercel Functions는 루트 `api/` 폴더를 함수로 배포하므로 실제 업
 - `RESULT_ASSET_URL_TTL_SECONDS` (F-09 signed URL 만료, 기본값: `3600`)
 - `RESULT_UPLOAD_MAX_VIDEO_BYTES` (F-05 업로드 video 최대 크기, 기본값: `26214400`)
 - `RESULT_UPLOAD_MAX_POSTER_BYTES` (F-05 업로드 poster 최대 크기, 기본값: `2097152`)
+- `RESULT_UPLOAD_RATE_LIMIT` (키오스크 업로드 버킷, 분당 IP 당, 기본값: `10`)
+- `RESULT_PUBLIC_RATE_LIMIT` (관객 공개 조회 버킷, 분당 IP 당, 기본값: `240`)
+- `RESULT_UNAUTH_RATE_LIMIT` (토큰 없는/틀린 운영 경로 요청 버킷, 분당 IP 당, 기본값: `30`)
+- `RESULT_ADMIN_RATE_LIMIT` (인증된 운영 버킷, 분당 토큰 당, 기본값: `120`)
+- `ORDER_RATE_LIMIT` (F-06 목업 주문 POST 버킷, 분당 IP 당, 기본값: `12`)
+
+### 결과 코드 발급과 덮어쓰기 차단
+
+`POST /api/results`는 무인증 엔드포인트라 클라이언트가 코드를 고르면 남의 결과를 덮어쓸 수 있다.
+그래서 코드 소유권을 서버가 판정한다.
+
+- `code` 폼 필드를 **생략하면 서버가 발급한다.** 응답은 `{ url, code }`이고 `code`는
+  `XXXX-XXXX`(base36 8자) 모양으로 `recorder.ts`의 `createSessionCode()`와 같다.
+- `code`를 보내면 하위호환으로 받아주되, 이미 존재하는 코드면 **어떤 쓰기도 하기 전에 409**
+  `{"error":"Result code already exists."}`로 거절한다.
+- 사전 확인과 실제 쓰기 사이의 경합은 Storage(`x-upsert` 없는 POST)와 `results.code` unique
+  제약이 닫는다. 두 upstream 409 모두 HTTP 409로 매핑된다.
+
+> 클라이언트 영향: `recorder.ts`의 `deliver()`는 응답의 `url`만 읽으므로 기존 계약 그대로 동작한다.
+> 다만 409를 받으면 업로드 실패로 간주해 **같은 코드로** IndexedDB 재시도 큐에 넣는다 —
+> 그 코드는 영구히 409이므로 재시도가 성공하지 못한다. 큐 drain 로직이 붙을 때
+> `code`를 빼고 재전송(서버 발급)하도록 맞춰야 한다.
 
 Supabase에는 `results` 버킷과 `results` 테이블이 필요하다. 테이블은 최소한
 `code`, `session_id`, `pattern_name`, `issued_at`, `tile_meta`, `video_path`,
@@ -41,6 +107,7 @@ unique 제약을 둔다.
 
 목업 주문 엔드포인트:
 
+- `POST /api/results` — F-05 업로드. `sessionId`, `certificate`, `video`, `posterImage` 필수이고 `code`는 선택이다. 성공 시 `{ url, code }`를 반환하고, 이미 있는 코드면 409다.
 - `POST /api/orders` — 방문자 폼에서 `resultCode`, `visitorName`, `contact`, `productOption`, `consent` JSON을 받는다. 성공 시 `{ orderId }`를 반환한다.
 - `GET /api/orders?code=ABCD-1234` — F-09 운영 화면에서 같은 결과 코드의 목업 주문을 조회한다. `Authorization: Bearer <RESULT_ADMIN_TOKEN>`이 필요하다.
 
@@ -79,8 +146,19 @@ F-09 환경과 보안:
 - F-09 운영 GET은 `Authorization: Bearer <RESULT_ADMIN_TOKEN>`이 필요하다. 운영자는 `/admin.html`의 운영 토큰 필드에 매번 값을 입력하며, 토큰은 브라우저 저장소에 보관하지 않는다.
 - F-05 `POST /api/results`는 현장 키오스크 업로드 계약을 유지하기 위해 `RESULT_ADMIN_TOKEN`을 요구하지 않는다.
 - F-05 POST는 `video/mp4`, `video/webm`, `image/png`, `image/jpeg`만 받고 video/poster 용량을 제한한다.
-- API에는 함수 인스턴스 단위의 기본 rate limit이 있으며, 공개 결과 조회와 운영 조회는 별도 버킷을 쓴다. 운영 배포에서는 Vercel/WAF 같은 플랫폼 rate limit을 추가로 적용한다.
-- `api/results.ts`, `api/orders.ts`는 Vite 로컬 미들웨어의 Web `Request`와 Vercel Node `req/res` 호출을 모두 처리하는 callable default handler로 노출한다.
+- rate limit 버킷은 넷으로 갈라져 있다: **업로드**(키오스크) · **공개 조회**(관객 폰) ·
+  **미인증**(토큰 없는/틀린 운영 경로 요청) · **운영**(인증 성공). 앞의 셋은 IP 키,
+  운영 버킷만 제시된 토큰 키다. 전시장은 단일 NAT라 관객 폰이 전부 같은 IP로 보이므로,
+  IP 키 운영 버킷이면 관객 트래픽만으로 운영자가 429에 잠긴다.
+- 인증 검사는 rate limit보다 **먼저** 돈다. 순서가 반대면 토큰 없는 요청이 운영 버킷을
+  소모해 같은 잠김이 재현된다. 미인증 요청은 401을 받되 미인증 버킷을 소진하면 429가 된다.
+- 함수 인스턴스 단위 카운터이므로 운영 배포에서는 Vercel/WAF 같은 플랫폼 rate limit을 추가로 적용한다.
+- 무인증 경로(`POST /api/results`, `POST /api/orders`, 공개 `GET /api/results?code=`)의 실패 응답은
+  Supabase 응답 본문을 싣지 않는다. 상세는 서버 로그(`[api/results]`, `[api/orders]`)에만 남고,
+  운영 토큰으로 인증된 조회에만 그대로 노출된다.
+- `api/results.ts`, `api/orders.ts`는 Vercel용 Web Handler named export(`GET`/`POST`)와,
+  Vite 로컬 미들웨어의 Web `Request` 및 Vercel Node `req/res` 호출을 모두 처리하는
+  callable default handler를 함께 노출한다. 자세한 근거는 위 「함수 시그니처 규약」 참고.
 - 상세 응답의 `videoUrl`, `posterUrl`은 서버가 Supabase Storage REST
   `POST /storage/v1/object/sign/{bucket}/{path}`로 발급한 signed URL이다.
 - `RESULT_ASSET_URL_TTL_SECONDS`가 없으면 signed URL TTL은 3600초다.
