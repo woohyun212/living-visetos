@@ -195,9 +195,7 @@ export class KioskView implements KioskScreen {
 
   showFarewell(): void {
     if (!this.chrome) return this.hide();
-    const card = this.panel('RESET', '고맙습니다', '세션을 파기했습니다', [
-      '방금 사용한 영상과 마스크는 이 순간 모두 지워졌습니다.',
-    ]);
+    const card = this.panel('RESET', '고맙습니다', '세션을 파기했습니다', []);
     this.open(card);
   }
 

@@ -294,7 +294,7 @@ export class StageView implements KioskScreen {
     this.setScene('RESET');
     this.noticeEyebrow.textContent = '세션 종료';
     this.noticeHeadline.textContent = '고맙습니다';
-    this.noticeNote.textContent = '방금 사용한 영상과 마스크는 이 순간 모두 지워졌습니다.';
+    this.noticeNote.textContent = '나만의 패턴과 함께한 시간이었습니다.';
     this.noticeOpsHint.textContent = '';
   }
 
