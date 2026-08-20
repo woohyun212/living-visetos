@@ -217,6 +217,15 @@ async function loadDetail(code: string): Promise<void> {
   }
 }
 
+async function searchDetailAndRefreshList(): Promise<void> {
+  const normalized = normalizeCode(codeSearch.value);
+  if (normalized) {
+    await loadDetail(normalized);
+  }
+
+  await loadList(0);
+}
+
 function renderDetail(result: ResultDetail, orders: OrderSummary[]): void {
   detailContent.replaceChildren();
 
@@ -328,13 +337,13 @@ function productOptionLabel(value: string): string {
   return value;
 }
 
-searchButton.addEventListener('click', () => void loadDetail(codeSearch.value));
+searchButton.addEventListener('click', () => void searchDetailAndRefreshList());
 refreshButton.addEventListener('click', () => void loadList(0));
 prevButton.addEventListener('click', () => void loadList(Math.max(0, offset - PAGE_LIMIT)));
 nextButton.addEventListener('click', () => void loadList(offset + PAGE_LIMIT));
 codeSearch.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') {
-    void loadDetail(codeSearch.value);
+    void searchDetailAndRefreshList();
   }
 });
 adminToken.addEventListener('keydown', (event) => {
