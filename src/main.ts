@@ -11,6 +11,7 @@
  * URL `?debug=1` 이면 풀스크린 연출·자동 진행·타임아웃을 끄고 예전처럼 버튼으로만 움직인다.
  */
 import { KioskFlow, type KioskStep, type KioskSteps } from './app/kiosk.ts';
+import { createSessionId } from './app/session-id.ts';
 import { KioskView, type KioskScreen } from './app/kiosk-view.ts';
 import { installOperatorControls } from './app/ops.ts';
 import { StageView } from './app/stage.ts';
@@ -56,7 +57,7 @@ let bag: BagLayer | null = null;
 
 /** 세션 스코프 상태 — RESET 시 통째로 버린다 (원칙 4: 원본 프레임은 남기지 않는다). */
 const session = {
-  id: crypto.randomUUID(),
+  id: createSessionId(),
   seed: null as FeatureSeed | null,
   tile: null as PatternTile | null,
   deliveryTicket: null as DeliveryTicket | null,
@@ -294,7 +295,7 @@ function destroySession(): void {
   bag = null;
   $('bagWrap').replaceChildren();
 
-  session.id = crypto.randomUUID();
+  session.id = createSessionId();
   session.seed = null;
   session.tile = null;
   clearDeliveryResult();
