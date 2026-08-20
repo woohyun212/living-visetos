@@ -9,13 +9,15 @@ const DELIVERY_STORE_NAME = 'pending-results';
 const DELIVERY_DB_VERSION = 1;
 const RESULT_UPLOAD_ENDPOINT = '/api/results';
 
+/*
+ * 캔버스 스트림에는 오디오 트랙이 없다 — 오디오 코덱을 요구하는 후보는
+ * isTypeSupported 를 통과해도 start() 에서 인코더 거부가 난다(w3 통합에서 실측).
+ * 또 avc1.42E01E(레벨 3.0)는 960×720 을 담지 못한다. plain mp4 를 앞세워
+ * 브라우저가 맞는 프로파일·레벨을 고르게 한다. (ADR-007: mp4 우선, webm 폴백)
+ */
 const RECORDER_MIME_TYPES = [
-  'video/mp4;codecs="avc1.42E01E,mp4a.40.2"',
-  'video/mp4;codecs="avc1.42E01E"',
-  'video/mp4;codecs="h264"',
   'video/mp4',
-  'video/webm;codecs="vp9,opus"',
-  'video/webm;codecs="vp8,opus"',
+  'video/mp4;codecs="h264"',
   'video/webm;codecs="vp9"',
   'video/webm;codecs="vp8"',
   'video/webm',
