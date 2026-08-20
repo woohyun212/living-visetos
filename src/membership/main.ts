@@ -295,7 +295,7 @@ renderAccountCard();
 
 renderEvolution()
   .then(() => {
-    statusBand.textContent = '회차별 시그니처 3종을 F-02 L1 엔진으로 렌더했습니다. 계정 연동·저장이 없는 발표용 컨셉 화면입니다.';
+    statusBand.textContent = '회차별 시그니처 3종을 패턴 엔진으로 렌더했습니다. 계정 연동·저장이 없는 발표용 컨셉 화면입니다.';
   })
   .catch((error: unknown) => {
     const detail = error instanceof Error ? error.message : '시그니처를 렌더하지 못했습니다.';

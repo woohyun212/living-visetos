@@ -22,13 +22,13 @@
   <button id="btnTile" type="button" disabled>2. 패턴 생성 <small>(B)</small></button>
   <button id="btnOverlay" type="button" disabled>3. 실루엣 오버레이 <small>(C)</small></button>
   <button id="btnBag" type="button" disabled>4. 가방에 입히기 <small>(C)</small></button>
-  <button id="btnDeliver" type="button" disabled>5. 결과 녹화/전송 <small>(D·F-05)</small></button>
+  <button id="btnDeliver" type="button" disabled>5. 결과 녹화/전송 <small>(D)</small></button>
   <button id="btnAll" type="button" class="alt" disabled>▶ 전체 실행 (데모 플로우)</button>
 </div>
 <div id="status">Chrome에서 열고 카메라를 허용하세요.</div>
 <div class="deliveryPanel" aria-live="polite">
   <div class="deliveryCopy">
-    <b>D · F-05</b>
+    <b>모듈 D</b>
     <span id="deliveryInfo">패턴과 오버레이 준비 후 결과를 녹화할 수 있습니다.</span>
     <span class="deliveryInstruction">녹화가 끝나면 결과 링크 또는 오프라인 전달 코드가 오른쪽에 크게 표시됩니다.</span>
   </div>
@@ -52,7 +52,7 @@
 
 <div class="grid">
   <div class="panel">
-    <h2><b>모듈 A → C</b> · 카메라 &amp; 실루엣 오버레이 (F-01 / F-03)</h2>
+    <h2><b>모듈 A → C</b> · 카메라 &amp; 실루엣 오버레이</h2>
     <div class="stage">
       <video id="video" autoplay playsinline muted></video>
       <canvas id="overlayCanvas"></canvas>
@@ -60,7 +60,7 @@
   </div>
   <div>
     <div class="panel panel--seed">
-      <h2><b>모듈 A</b> · FeatureSeed (F-01)</h2>
+      <h2><b>모듈 A</b> · FeatureSeed</h2>
       <div class="inner">
         <div class="seedColors" id="seedColors"><i></i><i></i><i></i></div>
         <div class="kv" id="seedInfo">아직 추출 전</div>
@@ -68,11 +68,11 @@
     </div>
     <div class="row">
       <div class="panel">
-        <h2><b>모듈 B</b> · PatternTile (F-02·L1)</h2>
+        <h2><b>모듈 B</b> · PatternTile (L1)</h2>
         <div class="inner"><canvas id="tileCanvas" width="512" height="512"></canvas></div>
       </div>
       <div class="panel">
-        <h2><b>모듈 C</b> · 3D 프리뷰 (F-04)</h2>
+        <h2><b>모듈 C</b> · 3D 프리뷰</h2>
         <div id="bagWrap"></div>
       </div>
     </div>

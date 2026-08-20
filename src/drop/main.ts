@@ -391,7 +391,7 @@ window.setInterval(tickCountdowns, COUNTDOWN_INTERVAL_MS);
 
 renderSeasons()
   .then(() => {
-    statusBand.textContent = '시즌 패턴 3종을 F-02 L1 엔진으로 즉석 렌더했습니다. 응모·재고·결제 백엔드가 없는 발표용 목업 화면입니다.';
+    statusBand.textContent = '시즌 패턴 3종을 패턴 엔진으로 즉석 렌더했습니다. 응모·재고·결제 백엔드가 없는 발표용 목업 화면입니다.';
   })
   .catch((error: unknown) => {
     const detail = error instanceof Error ? error.message : '시즌 패턴을 렌더하지 못했습니다.';

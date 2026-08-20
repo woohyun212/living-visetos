@@ -565,7 +565,7 @@ function ordersBlock(orders: OrderSummary[]): HTMLElement {
     block.append(blankState({
       icon: 'tag',
       title: '연결된 주문 없음',
-      body: '이 결과 코드로 저장된 F-06 목업 주문이 없습니다.',
+      body: '이 결과 코드로 저장된 목업 주문이 없습니다.',
       variant: 'inline',
     }));
     return block;
