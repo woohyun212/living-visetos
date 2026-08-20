@@ -380,8 +380,9 @@ function installMockCamera(): void {
   };
   paint();
 
-  const stream = canvas.captureStream(30);
-  const fake = { getUserMedia: async () => stream } as unknown as MediaDevices;
+  // 세션마다 새 스트림을 준다 — RESET 이 앞 세션의 트랙을 멈추므로(원칙 4),
+  // 하나를 돌려쓰면 두 번째 관객의 카메라가 죽은 채로 열린다(실제 getUserMedia 와 같게 맞춘다).
+  const fake = { getUserMedia: async () => canvas.captureStream(30) } as unknown as MediaDevices;
   try {
     Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: fake });
   } catch {

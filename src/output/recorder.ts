@@ -17,8 +17,13 @@ const RESULT_UPLOAD_ENDPOINT = '/api/results';
 const PORTRAIT_FPS = 30;
 /** timeslice — 첫 조각이 오는지로 '조용히 죽은 인코더' 를 빨리 잡아낸다. */
 const RECORDER_TIMESLICE_MS = 1000;
-/** 첫 조각 대기 상한. 넘으면 이 후보를 버리고 다음 후보로 간다. */
-const FIRST_CHUNK_TIMEOUT_MS = 2500;
+/*
+ * 첫 조각 대기 상한. 넘으면 이 후보를 버리고 다음 후보로 간다.
+ * mp4 muxer 는 init 조각(수백 바이트)을 늦게 흘린다 — 1080×1920 headless 실측 3.4초.
+ * webm(vp9)은 1.0초. 6초는 그 사이를 넉넉히 덮으면서도, 진짜 죽은 인코더에 8초를
+ * 통째로 버리지 않는 선이다(ADR-007 의 mp4 우선을 시간 제한으로 깨뜨리지 않기 위함).
+ */
+const FIRST_CHUNK_TIMEOUT_MS = 6000;
 /** 포스터를 PNG 로 유지할 상한(서버 RESULT_UPLOAD_MAX_POSTER_BYTES=2MB). 넘으면 JPEG 로 다시 뜬다. */
 const POSTER_PNG_MAX_BYTES = 1_600_000;
 const POSTER_JPEG_QUALITY = 0.9;
