@@ -16,7 +16,7 @@ import { StageView } from './app/stage.ts';
 import { StateMachine } from './app/state.ts';
 import type { DeliveryTicket, FeatureSeed, PatternTile } from './contracts.ts';
 import { drawQrCode, toScannableUrl, toShortUrlLabel } from './output/qr.ts';
-import { CLIP_SECONDS, deliver, record } from './output/recorder.ts';
+import { CLIP_SECONDS, deliver, record, startDeliveryRetry } from './output/recorder.ts';
 import { generateTile } from './pattern/l1.ts';
 import { acceptPromotedTile, promoteToL2 } from './pattern/l2.ts';
 import { BagLayer } from './render/bag.ts';
@@ -228,12 +228,20 @@ async function runDeliver(patternName: string): Promise<void> {
     setDelivery(`${CLIP_SECONDS}초 동안 실루엣 오버레이를 녹화하고 전송합니다.`, '처리 중');
     setStatus('결과 녹화/전송 중입니다. 잠시만 기다려주세요.');
 
-    const pkg = await record(overlayCanvas, {
-      sessionId: session.id,
-      patternName,
-      tileMeta: session.tile.meta,
-      seconds: CLIP_SECONDS,
-    });
+    // 녹화는 무대와 같은 그림을 1080×1920 세로로 합성한다(카메라 거울 + 실루엣 오버레이).
+    const pkg = await record(
+      {
+        video,
+        overlayCanvas,
+        subscribeOverlayFrame: (listener) => overlay.onFrameRendered(listener),
+      },
+      {
+        sessionId: session.id,
+        patternName,
+        tileMeta: session.tile.meta,
+        seconds: CLIP_SECONDS,
+      },
+    );
     const ticket = await deliver(pkg);
     session.deliveryTicket = ticket;
     renderContract();
@@ -327,6 +335,12 @@ const BUTTON_STEPS: [string, KioskStep][] = [
 for (const [id, step] of BUTTON_STEPS) {
   $<HTMLButtonElement>(id).onclick = () => void flow.requestStep(step);
 }
+
+/*
+ * ADR-005 재시도 큐 소비 — 앱이 뜨는 순간·인터넷이 돌아오는 순간·60초마다 조용히 재전송한다.
+ * 성공해도 화면은 그대로다: 관객은 이미 세션 코드를 들고 갔고, 재전송은 그 코드 그대로 올라간다.
+ */
+startDeliveryRetry();
 
 document.body.classList.toggle('is-debug', DEBUG_MODE);
 $('status').textContent = DEBUG_MODE
