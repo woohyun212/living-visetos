@@ -170,3 +170,121 @@ F-09 한계:
 - 키오스크가 오프라인으로 IndexedDB/localStorage에 큐잉한 결과는 이 PR에서 drain하지 않는다.
 - Signed asset URL은 Supabase 버킷과 오브젝트 권한이 허용되어야 열릴 수 있다.
 - 현재 F-05 녹화본은 전체 최종 가방 합성이 아니라 `overlayCanvas`를 기록한다.
+
+## 자체 서버 호스팅 (Vercel 대안)
+
+Vercel 대신 사용자 소유 단일 VM 에 올리는 경로다. Vercel 배포와 **같은 `api/*.ts` 핸들러를
+그대로** 쓰고, 앞단만 `server.mjs`(Node 내장 `http`)로 바꾼다.
+
+### 구조
+
+```
+/opt/living-visetos/
+  server.mjs      # 정적 서빙 + /results 리라이트 + /api/* 위임
+  api/*.ts        # Vercel 과 동일한 소스. node --experimental-transform-types 로 직접 로드
+  dist/           # vite build 산출물
+  package.json
+/etc/living-visetos.env          # 비밀값 (600, root:root)
+/etc/systemd/system/living-visetos.service
+```
+
+`server.mjs` 는 Node 내장 모듈만 사용하고 `api/*.ts` 도 런타임 npm 의존성이 없다
+(Supabase 접근은 전부 `fetch`). 따라서 **서버에 `node_modules` 를 두지 않는다.**
+리포가 private 이라 서버에서 `git clone` 하지 않고, 빌드 산출물만 rsync 로 밀어 넣는다.
+
+`server.mjs` 의 요청 어댑터는 `vite.config.ts` 로컬 미들웨어의 `toWebRequest` /
+`sendWebResponse` 를 이식한 것이다. 다만 업로드 본문은 `duplex: 'half'` 스트리밍 대신
+버퍼링하고, 버퍼를 붙일 때 `content-length` / `transfer-encoding` 을 제거한다
+(undici 가 프레이밍 헤더를 다시 계산하므로 남겨두면 `formData()` 가 깨진다).
+
+`/results` 리라이트 범위는 `vercel.json`(`/results/:code`)이 아니라 vite 쪽
+(`/results` 와 `/results/*` 모두)을 따른다.
+
+### 최초 서버 준비
+
+```bash
+# 1. Node 22.x (>=22.7 이어야 --experimental-transform-types 가 있다)
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+apt-get install -y nodejs
+
+# 2. 전용 비권한 계정
+useradd --system --no-create-home --shell /usr/sbin/nologin living-visetos
+
+# 3. 비밀값. RESULT_ADMIN_TOKEN 은 반드시 새로 생성한다(테스트 토큰 재사용 금지).
+openssl rand -hex 32 > /root/living-visetos.admin-token
+chmod 600 /root/living-visetos.admin-token
+cat > /etc/living-visetos.env <<'ENV'
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
+RESULT_PUBLIC_BASE_URL=http://<공인주소>[:포트]
+RESULT_ADMIN_TOKEN=<위에서 생성한 값>
+PORT=443
+ENV
+chmod 600 /etc/living-visetos.env
+```
+
+> `EnvironmentFile` 은 `export` 접두사를 이름의 일부로 파싱한다. `.omc/e2e.env` 처럼
+> `export KEY=VALUE` 형태를 그대로 복사하면 **모든 변수가 비어서 API 가 조용히 503** 을
+> 낸다(핸들러가 모듈 로드 시점에 `process.env` 를 읽기 때문). 반드시 `export ` 를 제거한다.
+
+systemd 유닛은 비특권 계정으로 1024 미만 포트를 열기 위해
+`AmbientCapabilities=CAP_NET_BIND_SERVICE` 를 쓴다.
+
+### TS 로딩 플래그는 반드시 `--experimental-transform-types` 다
+
+`--experimental-strip-types`(스트립 전용)로는 **기동하지 않는다.** `api/*.ts` 의 `HttpError` 가
+생성자 파라미터 프로퍼티를 쓰는데, 이건 타입을 지우는 것만으로는 처리할 수 없는 문법이라
+스트립 전용 모드가 거부한다:
+
+```
+TypeScript parameter property is not supported in strip-only mode
+```
+
+`--experimental-transform-types` 는 스트립 전용의 상위 집합이라 파라미터 프로퍼티·enum·
+namespace 까지 처리한다. api 코드가 파라미터 프로퍼티를 계속 쓰는 한 이 플래그를 유지한다.
+(w4 통합 브랜치에서 `readonly detail?` 이 추가되며 파라미터 프로퍼티가 2 개로 늘었다 —
+스트립 전용을 고집했다면 그 머지 시점에 서비스가 부팅 실패했을 것이다.)
+
+### 배포
+
+```bash
+scripts/deploy.sh <ssh-target>          # 빌드 -> rsync -> 서비스 재시작
+DEPLOY_HOST=living-visetos scripts/deploy.sh
+SKIP_BUILD=1 scripts/deploy.sh <ssh-target>   # 이미 빌드한 dist/ 재전송
+```
+
+`DEPLOY_PATH`(기본 `/opt/living-visetos`), `DEPLOY_SERVICE`(기본 `living-visetos`)로
+경로와 유닛 이름을 바꿀 수 있다. 호스트는 하드코딩하지 않는다.
+
+### 포트 선택 주의 (NAT 환경)
+
+서버가 공유기/NAT 뒤에 있으면 리스닝 포트와 **외부에서 실제로 열리는 포트가 다르다.**
+`ss -tulpn` 으로 로컬만 확인하면 안 되고, 외부에서 반드시 검증한다. 포워딩되지 않은
+포트를 고르면 서비스는 정상인데 관객 폰에서만 안 열린다.
+
+`RESULT_PUBLIC_BASE_URL` 은 QR 로 찍히는 결과 URL 의 기준이므로 **외부에서 접근 가능한
+주소와 포트**를 그대로 적어야 한다. 기본 포트가 아니면 `http://1.2.3.4:443` 처럼 포트까지 넣는다.
+
+### 한계
+
+- TLS 가 없다. 도메인이 없어 인증서를 발급받지 못하므로 평문 HTTP 로 서비스한다.
+  도메인이 생기면 앞단에 nginx + Let's Encrypt 를 두고 `server.mjs` 는 localhost 포트로
+  내리는 구성이 맞다.
+- rate limit 은 프로세스 단위이며 `x-forwarded-for` 가 없는 직결 환경에서는
+  클라이언트 구분이 되지 않는다. 아래 "운영 주의" 참고.
+
+### 운영 주의 — rate limit 이 사실상 전역이다
+
+`api/results.ts` / `api/orders.ts` 의 `clientAddressFor()` 는 `x-forwarded-for` 나
+`x-real-ip` 가 없으면 문자열 `'unknown'` 으로 떨어진다. 리버스 프록시 없이 직결로
+받는 자체 서버에서는 두 헤더가 **항상 없으므로 모든 클라이언트가 같은 버킷**을 쓴다.
+
+게다가 Vercel 처럼 인스턴스가 자주 갈리지 않고 프로세스가 계속 살아 있어서
+버킷이 프로세스 수명 내내 누적된다. 결과적으로:
+
+- `UPLOAD_RATE_LIMIT = 10` → 설치 전체에서 분당 업로드 10 건
+- `ORDER_RATE_LIMIT = 12` → 설치 전체에서 분당 주문 12 건
+
+키오스크 1 대 현장 운영에는 충분하지만, 동시 다발 트래픽이나 부하 테스트에서는
+정상 요청이 429 로 막힌다. 앞단에 nginx 를 두게 되면 `x-forwarded-for` 를 넣어 주고,
+그 전까지는 이 한계를 감안해서 운영한다.
