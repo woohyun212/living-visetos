@@ -72,8 +72,14 @@ loader.load(
 
   /** PatternTile 을 가방 텍스처로 스왑. L2 승격 시에도 이 함수를 다시 부른다. */
   applyTile(tile: PatternTile): void {
+  if (this.bagMeshes.length === 0) {
+    this.pendingTile = tile;
+    return;
+  }
 
-    const next = new THREE.Texture(tile.bitmap);
+  this.pendingTile = null;
+
+  const next = new THREE.Texture(tile.bitmap);
     next.colorSpace = THREE.SRGBColorSpace;
     next.wrapS = next.wrapT = THREE.RepeatWrapping;
     next.repeat.set(2, 2);
