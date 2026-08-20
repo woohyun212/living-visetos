@@ -156,8 +156,8 @@ async function runDeliver(): Promise<void> {
     return;
   }
 
-  if (!overlay.isRunning) {
-    overlay.start();
+  const startedOverlay = !overlay.isRunning;
+  if (startedOverlay) {
     $<HTMLButtonElement>('btnOverlay').textContent = '3. 오버레이 끄기 (C)';
   }
 
@@ -166,7 +166,7 @@ async function runDeliver(): Promise<void> {
   setStatus('오버레이 첫 마스크 프레임을 준비하는 중입니다.');
 
   try {
-    await overlay.waitForFrame();
+    await overlay.ensureRunningAndWaitForFrame();
     setDelivery(`${CLIP_SECONDS}초 동안 실루엣 오버레이를 녹화하고 전송합니다.`, '처리 중');
     setStatus('결과 녹화/전송 중입니다. 잠시만 기다려주세요.');
 

@@ -38,6 +38,12 @@ export class OverlayLayer {
     void this.loop();
   }
 
+  ensureRunningAndWaitForFrame(timeoutMs = FIRST_FRAME_TIMEOUT_MS): Promise<void> {
+    const frameReady = this.waitForFrame(timeoutMs);
+    this.start();
+    return frameReady;
+  }
+
   waitForFrame(timeoutMs = FIRST_FRAME_TIMEOUT_MS): Promise<void> {
     const frameCount = this.renderedFrameCount;
 
