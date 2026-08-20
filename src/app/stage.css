@@ -116,16 +116,20 @@
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(120% 70% at 50% 30%, transparent 40%, rgba(14, 12, 10, 0.55) 100%),
-    linear-gradient(180deg, rgba(14, 12, 10, 0.55) 0%, transparent 22%, transparent 58%, rgba(14, 12, 10, 0.88) 100%);
+    radial-gradient(120% 66% at 50% 34%, transparent 34%, rgba(14, 12, 10, 0.62) 100%),
+    linear-gradient(180deg, rgba(14, 12, 10, 0.62) 0%, transparent 20%, transparent 52%, rgba(14, 12, 10, 0.92) 100%);
 }
 
-/* 장면 전환 상태 (data-scene = KioskState) */
-.stageRoot[data-scene='ATTRACT'] .stageIdle,
+/* 장면 전환 상태 (data-scene = KioskState)
+   유휴 패턴은 0.5 로 깔아 어두운 발표장 톤을 유지한다 — 패턴이 주인공이되
+   벽처럼 밝아지지는 않는다. CONSENT/RESET 은 카드가 주인공이라 한 단 더 내린다. */
+.stageRoot[data-scene='ATTRACT'] .stageIdle {
+  opacity: 0.5;
+}
 .stageRoot[data-scene='CONSENT'] .stageIdle,
 .stageRoot[data-scene='RESET'] .stageIdle,
 .stageRoot[data-scene='ERROR_RECOVER'] .stageIdle {
-  opacity: 1;
+  opacity: 0.3;
 }
 .stageRoot[data-scene='CREATE'] .stageCamera,
 .stageRoot[data-scene='TRANSFORM'] .stageCamera,
@@ -167,8 +171,11 @@
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.12;
+  /* 한국어는 어절 단위로만 끊는다 — "될까/요?" 같은 줄바꿈을 막는다. */
+  word-break: keep-all;
 }
 .stageSub {
+  word-break: keep-all;
   color: rgba(247, 243, 236, 0.72);
   font-size: 40px;
   font-weight: 400;
@@ -211,7 +218,7 @@
   animation: stagePulse 4.2s var(--st-ease) infinite;
 }
 @keyframes stageBreath {
-  0%, 100% { opacity: 0.35; transform: scaleX(0.72); }
+  0%, 100% { opacity: 0.55; transform: scaleX(0.72); }
   50% { opacity: 1; transform: scaleX(1); }
 }
 @keyframes stagePulse {
@@ -241,7 +248,7 @@
   display: none;
 }
 .stageCard .stageHeadline {
-  font-size: 76px;
+  font-size: 68px;
 }
 .stageBullets {
   display: grid;
@@ -254,6 +261,7 @@
   text-align: left;
 }
 .stageBullet {
+  word-break: keep-all;
   color: rgba(247, 243, 236, 0.78);
   font-size: 30px;
   line-height: 1.5;
@@ -361,9 +369,9 @@
 .stageBagSlot {
   position: absolute;
   left: 50%;
-  bottom: 0;
+  bottom: 56px;
   width: 100%;
-  height: 640px;
+  height: 620px;
   transform: translateX(-50%);
   display: grid;
   place-items: center;
@@ -376,8 +384,8 @@
   opacity: 1;
 }
 .is-stage .stageBagSlot > #bagWrap {
-  width: 620px;
-  height: 620px;
+  width: 600px;
+  height: 600px;
   aspect-ratio: auto;
   background: transparent;
 }
@@ -392,9 +400,11 @@
 }
 
 /* ── OWN — 이름 짓기 + QR 카드 ───────────────────────────────── */
+/* 하단 1/3 은 가방 자리 — 카드는 그 위 2/3 의 가운데에 선다. */
 .stageScene--own {
   align-content: center;
   justify-items: center;
+  padding-bottom: 700px;
 }
 .stageForm {
   display: grid;
@@ -450,10 +460,12 @@
   border: none;
   border-radius: 8px;
 }
-/* 비디오월은 멀리서 본다 — 스캔 가능 최소치(200px)의 두 배로 키운다. */
+/* 비디오월은 멀리서 본다 — 스캔 가능 최소치(200px)의 두 배로 키운다.
+   !important 는 취향이 아니라 필요다: qrcode 라이브러리가 캔버스에 인라인 width/height 를
+   직접 박아 넣기 때문에 선택자 특정도로는 이길 수 없다. */
 .is-stage .stageScene--own #resultQrCanvas {
-  width: 420px;
-  height: 420px;
+  width: 420px !important;
+  height: 420px !important;
   /* 256px 백킹스토어를 420px 로 키운다 — 보간하면 모듈 경계가 흐려져 스캔이 떨어진다. */
   image-rendering: pixelated;
 }

@@ -55,7 +55,7 @@ const IDLE_SEEDS: readonly FeatureSeed[] = [
 ];
 
 /** 무대 위에서 타일 한 장이 차지하는 크기(px). 멀리서도 모티프가 읽히는 선. */
-const IDLE_TILE_PX = 460;
+const IDLE_TILE_PX = 640;
 /** 한 패턴이 머무는 시간 — 관객이 "변한다" 를 알아챌 만큼만 천천히. */
 const IDLE_CYCLE_MS = 11_000;
 const IDLE_FADE_MS = 2_200;
